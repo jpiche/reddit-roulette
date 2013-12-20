@@ -1,0 +1,14 @@
+target
+project/target
+project/project
+.DS_Store
+.history
+*.swp
+*~
+*#
+local.properties
+*.iml
+.idea
+bin
+gen
+obj
