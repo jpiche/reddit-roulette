@@ -41,7 +41,6 @@ object Web {
     @tailrec
     def read() {
       val count = in.read(buffer)
-      Log.d(LOG_TAG, "read %d bytes" format count)
       if (count != -1) {
         out.write(buffer, 0, count)
         read()

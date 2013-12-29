@@ -55,18 +55,22 @@ class MainActivity extends Activity with TypedViewHolder {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.main)
 
-    if (savedInstanceState == null || manager.getBackStackEntryCount == 0) {
+    if (savedInstanceState == null) {
       val homeFrag = HomeFragment(homeListener)
       val t = manager.beginTransaction()
       t.replace(TR.container.id, homeFrag, HomeFragment.FRAG_TAG)
       t.commit()
     } else {
+      val h = manager.findFragmentByTag(HomeFragment.FRAG_TAG).asInstanceOf[HomeFragment]
+      if (h != null) {
+        h.listener = homeListener
+      }
+
       Range.apply(0, manager.getBackStackEntryCount) foreach { i =>
         val tag = manager.getBackStackEntryAt(i).getName
         val f = manager findFragmentByTag tag
         if (f == null) return
         f match {
-          case h@HomeFragment() => h.listener = homeListener
           case w@WebFragment() => w.listener = webListener
           case i@ImageFragment() => i.listener = imageListener
         }

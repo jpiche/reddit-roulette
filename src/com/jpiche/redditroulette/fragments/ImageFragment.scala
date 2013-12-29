@@ -16,11 +16,16 @@ case class ImageFragment() extends Fragment {
 
   private lazy val LOG_TAG = this.getClass.getSimpleName
   private lazy val picasso = Picasso `with` getActivity
-  private lazy val progress = getView.findView(TR.progress)
 
   private val handler = new Handler(new Handler.Callback {
     def handleMessage(msg: Message): Boolean = {
-      progress.setVisibility(msg.what)
+      val v = getView
+      if (v == null) return false
+
+      val prog = getView.findView(TR.progress)
+      if (prog == null) return false
+
+      prog.setVisibility(msg.what)
       false
     }
   })
