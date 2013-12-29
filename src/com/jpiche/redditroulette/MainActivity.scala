@@ -13,6 +13,7 @@ import android.view.{MenuItem, View}
 import android.os.Handler.Callback
 import com.jpiche.redditroulette.fragments.{WebFragment, ImageFragment, HomeFragment}
 import android.app.FragmentManager.OnBackStackChangedListener
+import com.testflightapp.lib.TestFlight
 
 class MainActivity extends Activity with TypedViewHolder {
 
@@ -117,6 +118,7 @@ class MainActivity extends Activity with TypedViewHolder {
 
   private def loadItem() {
     Log.d(LOG_TAG, "loadImage")
+    TestFlight.passCheckpoint(RouletteApp.CHECKPOINT_PLAY)
 
     progressHander.sendEmptyMessage(View.VISIBLE)
 

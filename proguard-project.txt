@@ -21,4 +21,5 @@
 
 
 -dontwarn org.joda.convert.**
+-dontwarn org.msgpack.**
 
