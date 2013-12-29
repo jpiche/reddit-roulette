@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MainActivity</string>
+    <string name="app_name">Reddit Roulette</string>
+
+    <string name="go_btn">Go!</string>
+
+    <string name="image_load_error">Error loading image</string>
+    <string name="url_load_error">Error loading URL</string>
+    <string name="api_load_error">Error loading data from Reddit API</string>
 </resources>

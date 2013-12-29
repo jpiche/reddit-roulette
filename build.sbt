@@ -23,8 +23,10 @@ scalacOptions ++= Seq(
 libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.3",
   "org.joda" % "joda-convert" % "1.5",
-  "io.spray" %%  "spray-json" % "1.2.5",
-  "com.squareup.okhttp" % "okhttp" % "1.2.1"
+  "org.scalaz" %% "scalaz-core" % "7.0.5",
+  "com.squareup.okhttp" % "okhttp" % "1.2.1",
+  "com.squareup.picasso" % "picasso" % "2.1.1",
+  "io.argonaut" %% "argonaut" % "6.0.1"
 )
 
 resolvers ++= Seq(
