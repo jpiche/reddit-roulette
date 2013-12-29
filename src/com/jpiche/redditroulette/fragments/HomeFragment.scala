@@ -2,14 +2,21 @@ package com.jpiche.redditroulette.fragments
 
 import com.jpiche.redditroulette.TypedResource._
 import android.app.Fragment
-import android.view.{View, ViewGroup, LayoutInflater}
+import android.view._
 import android.os.Bundle
 import android.view.View.OnClickListener
 import com.jpiche.redditroulette.{TR, R}
 
 case class HomeFragment() extends Fragment with OnClickListener {
 
+  // this is a var instead of a case class argument because Android requires
+  // a public empty constructor
   var listener: Option[HomeFragment.Listener] = None
+
+  override def onCreate(inst: Bundle) {
+    super.onCreate(inst)
+    setHasOptionsMenu(true)
+  }
 
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
@@ -29,6 +36,11 @@ case class HomeFragment() extends Fragment with OnClickListener {
       case TR.go_btn.id => listener map { _.clickedGo() }
     }
     return
+  }
+
+  override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+    inflater.inflate(R.menu.main, menu)
+    super.onCreateOptionsMenu(menu, inflater)
   }
 }
 

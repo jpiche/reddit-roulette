@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="RouletteTheme"
+           parent="android:Theme.Holo">
+        <item name="android:actionBarStyle">@style/RRActionBar</item>
+        <item name="android:buttonStyle">@style/RRButton</item>
+    </style>
+
+    <!-- ActionBar styles -->
+    <style name="RRActionBar"
+           parent="android:Widget.Holo.ActionBar">
+        <item name="android:background">@drawable/actionbar_bg</item>
+    </style>
+
+    <style name="RRButton"
+           parent="android:style/Widget.Button">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/button_text</item>
+        <item name="android:layout_margin">0dip</item>
+        <item name="android:paddingTop">@dimen/button_padding_top</item>
+        <item name="android:paddingBottom">@dimen/button_padding_bottom</item>
+        <item name="android:paddingLeft">@dimen/button_padding_left</item>
+        <item name="android:paddingRight">@dimen/button_padding_right</item>
+        <item name="android:background">@drawable/button_bg</item>
+    </style>
+
+</resources>

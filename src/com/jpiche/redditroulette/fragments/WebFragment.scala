@@ -1,14 +1,13 @@
 package com.jpiche.redditroulette.fragments
 
 import com.jpiche.redditroulette.TypedResource._
-import android.app.Fragment
 import android.view.{LayoutInflater, ViewGroup, View}
 import android.os.Bundle
 import android.webkit.{WebChromeClient, WebViewClient}
 import com.jpiche.redditroulette.TR
 import com.jpiche.redditroulette.reddit.Thing
 
-case class WebFragment() extends Fragment {
+case class WebFragment() extends ThingFragment {
 
   var listener: Option[WebFragment.Listener] = None
 
@@ -16,28 +15,13 @@ case class WebFragment() extends Fragment {
   private lazy val webViewClient = new WebViewClient
   private lazy val webChromeClient = new WebChromeClient
 
-  override def onCreate(inst: Bundle) {
-    super.onCreate(inst)
-
-    val args = getArguments
-    if (args == null) {
-      listener map { _.onError() }
-    } else {
-      val title = args.getString(WebFragment.TITLE_KEY)
-      getActivity.getActionBar.setTitle(title)
-    }
-    return
-  }
-
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
-    val args = getArguments
-    if (args == null) {
+    if (thingUrl.isEmpty) {
       listener map { _.onError() }
       return null
     }
-    val url = args.getString(WebFragment.URL_KEY)
 
     val attachToRoot = false
     val v = inflater.inflate(TR.layout.fragment_web, container, attachToRoot)
@@ -49,8 +33,8 @@ case class WebFragment() extends Fragment {
     web.setWebChromeClient(webChromeClient)
 
     web loadUrl {
-      if (savedInstanceState == null) url
-      else savedInstanceState.getString(WebFragment.URL_KEY, url)
+      if (savedInstanceState == null) thingUrl.get
+      else savedInstanceState.getString(ThingFragment.URL_KEY, thingUrl.get)
     }
 
     v
@@ -59,7 +43,7 @@ case class WebFragment() extends Fragment {
   override def onSaveInstanceState(outState: Bundle) {
     super.onSaveInstanceState(outState)
     val web = getView.findView(TR.web)
-    outState.putString(WebFragment.URL_KEY, web.getUrl)
+    outState.putString(ThingFragment.URL_KEY, web.getUrl)
   }
 
   def webView = getView.findView(TR.web)
@@ -67,15 +51,13 @@ case class WebFragment() extends Fragment {
 
 object WebFragment {
   val FRAG_TAG = this.getClass.getSimpleName
-  private val URL_KEY = "URL_KEY"
-  private val TITLE_KEY = "TITLE_KEY"
 
   def apply(listener: Option[Listener], thing: Thing): WebFragment = {
     val frag = new WebFragment()
     frag.listener = listener
     val b = new Bundle()
-    b.putString(URL_KEY, thing.url)
-    b.putString(TITLE_KEY, thing.title)
+    b.putString(ThingFragment.URL_KEY, thing.url)
+    b.putString(ThingFragment.TITLE_KEY, thing.title)
     frag.setArguments(b)
     frag
   }

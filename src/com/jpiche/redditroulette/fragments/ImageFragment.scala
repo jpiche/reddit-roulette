@@ -1,7 +1,6 @@
 package com.jpiche.redditroulette.fragments
 
 import com.jpiche.redditroulette.TypedResource._
-import android.app.Fragment
 import android.view.{LayoutInflater, ViewGroup, View}
 import android.os.{Message, Handler, Bundle}
 import com.squareup.picasso.{Callback, Picasso}
@@ -10,7 +9,7 @@ import android.util.Log
 import com.jpiche.redditroulette.TR
 import com.jpiche.redditroulette.reddit.Thing
 
-case class ImageFragment() extends Fragment {
+case class ImageFragment() extends ThingFragment {
 
   var listener: Option[ImageFragment.Listener] = None
 
@@ -30,34 +29,19 @@ case class ImageFragment() extends Fragment {
     }
   })
 
-  override def onCreate(inst: Bundle) {
-    super.onCreate(inst)
-
-    val args = getArguments
-    if (args == null) {
-      listener map { _.onError() }
-    } else {
-      val title = args.getString(ImageFragment.TITLE_KEY)
-      getActivity.getActionBar.setTitle(title)
-    }
-    return
-  }
-
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
-    val args = getArguments
-    if (args == null) {
+    if (thingUrl.isEmpty) {
       listener map { _.onError() }
       return null
     }
-    val url = args.getString(ImageFragment.URL_KEY)
 
     val attachToRoot = false
     val v = inflater.inflate(TR.layout.fragment_image, container, attachToRoot)
     val img = v.findView(TR.imageView)
 
-    picasso.load(Uri.parse(url))
+    picasso.load(Uri.parse(thingUrl.get))
       .into(img, new Callback {
       def onError() {
         listener map { _.onError() }
@@ -76,15 +60,13 @@ case class ImageFragment() extends Fragment {
 
 object ImageFragment {
   val FRAG_TAG = this.getClass.getSimpleName
-  private val URL_KEY = "URL_KEY"
-  private val TITLE_KEY = "TITLE_KEY"
 
   def apply(listener: Option[Listener], thing: Thing): ImageFragment = {
     val frag = new ImageFragment()
     frag.listener = listener
     val b = new Bundle()
-    b.putString(URL_KEY, thing.url)
-    b.putString(TITLE_KEY, thing.title)
+    b.putString(ThingFragment.URL_KEY, thing.url)
+    b.putString(ThingFragment.TITLE_KEY, thing.title)
     frag.setArguments(b)
     frag
   }

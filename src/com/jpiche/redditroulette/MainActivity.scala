@@ -9,9 +9,10 @@ import android.widget.Toast
 import android.app.{Fragment, Activity}
 import com.jpiche.redditroulette.reddit.{Thing, Subreddit}
 import scala.util.{Failure, Success}
-import android.view.View
+import android.view.{MenuItem, View}
 import android.os.Handler.Callback
 import com.jpiche.redditroulette.fragments.{WebFragment, ImageFragment, HomeFragment}
+import android.app.FragmentManager.OnBackStackChangedListener
 
 class MainActivity extends Activity with TypedViewHolder {
 
@@ -77,8 +78,13 @@ class MainActivity extends Activity with TypedViewHolder {
       }
     }
 
-    return
+    manager.addOnBackStackChangedListener(new OnBackStackChangedListener {
+      def onBackStackChanged() = shouldActionUp()
+    })
+    shouldActionUp()
   }
+
+  override def onNavigateUp(): Boolean = manager.popBackStackImmediate
 
   override def onBackPressed() {
     if (manager.getBackStackEntryCount > 0) {
@@ -92,6 +98,21 @@ class MainActivity extends Activity with TypedViewHolder {
     } else {
       super.onBackPressed()
     }
+  }
+
+  override def onOptionsItemSelected(item: MenuItem): Boolean =
+    item.getItemId match {
+      case R.id.settings =>
+        Log.i(LOG_TAG, "settings menu item")
+        true
+      case R.id.about =>
+        Log.i(LOG_TAG, "about menu item")
+        true
+      case _ => super.onOptionsItemSelected(item)
+    }
+
+  private def shouldActionUp() {
+    getActionBar.setDisplayHomeAsUpEnabled(manager.getBackStackEntryCount > 0)
   }
 
   private def loadItem() {

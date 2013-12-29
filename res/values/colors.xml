@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="black">#000000</color>
+    <color name="dark_gray">#333333</color>
+    <color name="light_gray">#a0a0a0</color>
+
+    <color name="button_default">#007AFF</color>
+    <color name="button_pressed">#0062cc</color>
+    <color name="button_focused">#0062cc</color>
+    <color name="button_text">#ffffff</color>
+    <color name="button_shadow">#20000000</color>
 </resources>
