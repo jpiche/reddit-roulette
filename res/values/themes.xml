@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="RouletteTheme"
-           parent="android:Theme.Holo">
+           parent="android:Theme.Holo.Light.DarkActionBar">
         <item name="android:actionBarStyle">@style/RRActionBar</item>
         <item name="android:buttonStyle">@style/RRButton</item>
     </style>
 
     <!-- ActionBar styles -->
     <style name="RRActionBar"
-           parent="android:Widget.Holo.ActionBar">
+           parent="android:Widget.Holo.Light.ActionBar.Solid.Inverse">
         <item name="android:background">@drawable/actionbar_bg</item>
     </style>
 

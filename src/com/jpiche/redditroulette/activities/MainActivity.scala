@@ -1,4 +1,4 @@
-package com.jpiche.redditroulette
+package com.jpiche.redditroulette.activities
 
 import scalaz._, Scalaz._
 
@@ -14,11 +14,11 @@ import android.os.Handler.Callback
 import com.jpiche.redditroulette.fragments.{WebFragment, ImageFragment, HomeFragment}
 import android.app.FragmentManager.OnBackStackChangedListener
 import com.testflightapp.lib.TestFlight
+import com.jpiche.redditroulette.{RouletteApp, R, TR, TypedViewHolder}
+import android.content.Intent
 
-class MainActivity extends Activity with TypedViewHolder {
+class MainActivity extends BaseActivity with TypedViewHolder {
 
-  private lazy val LOG_TAG = this.getClass.getSimpleName
-  private lazy val manager = getFragmentManager
   private lazy val progress = findView(TR.progress)
   private val toastHandler = new Handler(new Callback {
     def handleMessage(msg: Message): Boolean = {
@@ -105,6 +105,8 @@ class MainActivity extends Activity with TypedViewHolder {
     item.getItemId match {
       case R.id.settings =>
         Log.i(LOG_TAG, "settings menu item")
+        val i = new Intent(this, classOf[SettingsActivity])
+        startActivity(i)
         true
       case R.id.about =>
         Log.i(LOG_TAG, "about menu item")
