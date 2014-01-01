@@ -7,7 +7,7 @@ import android.webkit.{WebChromeClient, WebViewClient}
 import com.jpiche.redditroulette.TR
 import com.jpiche.redditroulette.reddit.Thing
 
-case class WebFragment() extends ThingFragment {
+final case class WebFragment() extends ThingFragment {
 
   var listener: Option[WebFragment.Listener] = None
 

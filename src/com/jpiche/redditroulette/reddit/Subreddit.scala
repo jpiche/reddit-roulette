@@ -3,11 +3,15 @@ package com.jpiche.redditroulette.reddit
 import argonaut._, Argonaut._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
-import com.jpiche.redditroulette.Web
-import scala.concurrent.Future
+import com.jpiche.redditroulette.{Db, Web}
+import scala.concurrent.{Future, future}
 import android.util.Log
 
-case class Subreddit(name: String) {
+
+case class Subreddit(
+    name: String,
+    nsfw: Boolean = false,
+    use: Boolean = true) {
   private lazy val LOG_TAG = this.getClass.getSimpleName
 
   lazy val url = "http://www.reddit.com/r/%s/" format name
@@ -29,19 +33,24 @@ case class Subreddit(name: String) {
 
 object Subreddit {
 
-  val availableSubs = List(
-    "earthporn",
-    "aww",
-    "puppies",
-    "cats",
-    "spaceporn",
-    "worldnews",
-    "nsfw",
-    "wtf"
+  private val defaultSubs = List(
+    Subreddit("earthporn"),
+    Subreddit("aww"),
+    Subreddit("puppies"),
+    Subreddit("cats"),
+    Subreddit("wtf", nsfw = true),
+    Subreddit("gonewild", nsfw = true),
+    Subreddit("nsfw", nsfw = true),
+    Subreddit("ginger", nsfw = true)
   )
 
-  def random: Subreddit = {
-    val i = Random.nextInt(availableSubs.length)
-    Subreddit(availableSubs(i))
+  def random(nsfw: Boolean)(implicit db: Db): Future[Subreddit] = future {
+    if (db.countSubs == 0) {
+      db add defaultSubs
+    }
+    val subs = db allSubs nsfw
+
+    val i = Random.nextInt(subs.size)
+    subs(i)
   }
 }

@@ -9,7 +9,7 @@ import android.util.Log
 import com.jpiche.redditroulette.TR
 import com.jpiche.redditroulette.reddit.Thing
 
-case class ImageFragment() extends ThingFragment {
+final case class ImageFragment() extends ThingFragment {
 
   var listener: Option[ImageFragment.Listener] = None
 

@@ -7,7 +7,7 @@ import android.os.Bundle
 import android.view.View.OnClickListener
 import com.jpiche.redditroulette.{TR, R}
 
-case class HomeFragment() extends Fragment with OnClickListener {
+final case class HomeFragment() extends Fragment with OnClickListener {
 
   // this is a var instead of a case class argument because Android requires
   // a public empty constructor

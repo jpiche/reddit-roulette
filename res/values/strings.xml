@@ -7,6 +7,7 @@
     <string name="image_load_error">Error loading image</string>
     <string name="url_load_error">Error loading URL</string>
     <string name="api_load_error">Error loading data from Reddit API</string>
+    <string name="no_internet">No data connection available</string>
 
     <!-- menu -->
     <string name="menu_settings">Settings</string>
@@ -16,6 +17,11 @@
 
     <!-- prefs -->
     <string name="pref_reddit_category">Reddit Settings</string>
-    <string name="pref_over18_title">Over 18?</string>
-    <string name="pref_over18_summary">Are you over eighteen and willing to see adult content?</string>
+    <string name="pref_over18_title">Allow NSFW Content</string>
+    <string name="pref_over18_summary">Are you over eighteen and willing to download and view adult content?</string>
+    <string name="pref_over19_alert_title">Allow NSFW Content</string>
+    <string name="pref_over19_alert_msg">Reddit Roulette is an app that picks content randomly off Reddit. Are you over eighteen and willing to allow adult content in the selection?</string>
+    <string name="pref_over19_yes">Yes, Allow NSFW</string>
+    <string name="pref_over19_no">No, PG content only!</string>
+    <string name="pref_write_error">Error writing preferences; please try again.</string>
 </resources>

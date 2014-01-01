@@ -14,4 +14,7 @@ class RouletteApp extends Application {
 
 object RouletteApp {
   val CHECKPOINT_PLAY = "CHECKPOINT_PLAY"
+
+  val PREF_NAME = "redditroulette"
+  val PREF_NSFW = "allow_nsfw"
 }

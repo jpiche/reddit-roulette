@@ -6,7 +6,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import android.os.{Message, Handler, Bundle}
 import android.util.Log
 import android.widget.Toast
-import android.app.{Fragment, Activity}
+import android.app.{AlertDialog, Fragment}
 import com.jpiche.redditroulette.reddit.{Thing, Subreddit}
 import scala.util.{Failure, Success}
 import android.view.{MenuItem, View}
@@ -15,9 +15,10 @@ import com.jpiche.redditroulette.fragments.{WebFragment, ImageFragment, HomeFrag
 import android.app.FragmentManager.OnBackStackChangedListener
 import com.testflightapp.lib.TestFlight
 import com.jpiche.redditroulette.{RouletteApp, R, TR, TypedViewHolder}
-import android.content.Intent
+import android.content.{Context, DialogInterface, Intent}
+import android.net.ConnectivityManager
 
-class MainActivity extends BaseActivity with TypedViewHolder {
+final class MainActivity extends BaseActivity with TypedViewHolder {
 
   private lazy val progress = findView(TR.progress)
   private val toastHandler = new Handler(new Callback {
@@ -53,6 +54,10 @@ class MainActivity extends BaseActivity with TypedViewHolder {
     }
   }.some
 
+  private lazy val backStackListener = new OnBackStackChangedListener {
+    def onBackStackChanged() = shouldActionUp()
+  }
+
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.main)
@@ -60,29 +65,22 @@ class MainActivity extends BaseActivity with TypedViewHolder {
     if (savedInstanceState == null) {
       val homeFrag = HomeFragment(homeListener)
       val t = manager.beginTransaction()
-      t.replace(TR.container.id, homeFrag, HomeFragment.FRAG_TAG)
+      t.add(TR.container.id, homeFrag, HomeFragment.FRAG_TAG)
       t.commit()
-    } else {
-      val h = manager.findFragmentByTag(HomeFragment.FRAG_TAG).asInstanceOf[HomeFragment]
-      if (h != null) {
-        h.listener = homeListener
-      }
 
-      Range.apply(0, manager.getBackStackEntryCount) foreach { i =>
-        val tag = manager.getBackStackEntryAt(i).getName
-        val f = manager findFragmentByTag tag
-        if (f == null) return
-        f match {
-          case w@WebFragment() => w.listener = webListener
-          case i@ImageFragment() => i.listener = imageListener
-        }
-      }
+      checkPrefs()
     }
 
-    manager.addOnBackStackChangedListener(new OnBackStackChangedListener {
-      def onBackStackChanged() = shouldActionUp()
-    })
+    manager addOnBackStackChangedListener backStackListener
     shouldActionUp()
+  }
+
+  override def onAttachFragment(frag: Fragment) {
+    frag match {
+      case h@HomeFragment() => h.listener = homeListener
+      case w@WebFragment() => w.listener = webListener
+      case i@ImageFragment() => i.listener = imageListener
+    }
   }
 
   override def onNavigateUp(): Boolean = manager.popBackStackImmediate
@@ -119,32 +117,64 @@ class MainActivity extends BaseActivity with TypedViewHolder {
   }
 
   private def loadItem() {
-    Log.d(LOG_TAG, "loadImage")
+    Log.d(LOG_TAG, "loadItem")
+    if ( ! hasConnection) {
+      toast(R.string.no_internet)
+      return
+    }
     TestFlight.passCheckpoint(RouletteApp.CHECKPOINT_PLAY)
 
     progressHander.sendEmptyMessage(View.VISIBLE)
 
-    Subreddit.random.next andThen {
-      case _ =>
-        progressHander.sendEmptyMessage(View.GONE)
+    val allowNsfw = prefs.getBoolean(RouletteApp.PREF_NSFW, false)
+    Subreddit.random(allowNsfw) map {
+      _.next andThen {
+        case _ =>
+          progressHander.sendEmptyMessage(View.GONE)
 
-    } onComplete {
-      case Success(thing: Thing) if thing.isImg =>
-        runOnUiThread(new Runnable {
-          def run() = addFrag(ImageFragment(imageListener, thing), ImageFragment.FRAG_TAG)
-        })
+      } onComplete {
+        case Success(thing: Thing) if thing.isImg =>
+          runOnUiThread(new Runnable {
+            def run() = addFrag(ImageFragment(imageListener, thing), ImageFragment.FRAG_TAG)
+          })
 
-      case Success(thing: Thing) =>
-        runOnUiThread(new Runnable {
-          def run() = addFrag(WebFragment(webListener, thing), WebFragment.FRAG_TAG)
-        })
+        case Success(thing: Thing) =>
+          runOnUiThread(new Runnable {
+            def run() = addFrag(WebFragment(webListener, thing), WebFragment.FRAG_TAG)
+          })
 
-      case Failure(e) =>
-        Log.e(LOG_TAG, "api exception: %s" format e)
-        toast(R.string.api_load_error)
+        case Failure(e) =>
+          Log.e(LOG_TAG, "api exception: %s" format e)
+          toast(R.string.api_load_error)
+      }
     }
 
     return
+  }
+
+  private def checkPrefs() {
+    if (prefs contains RouletteApp.PREF_NSFW) return
+
+    val builder = new AlertDialog.Builder(this)
+    builder.setTitle(R.string.pref_over19_alert_title)
+    builder.setMessage(R.string.pref_over19_alert_msg)
+    builder.setPositiveButton(R.string.pref_over19_yes, new DialogInterface.OnClickListener {
+      override def onClick(dialog: DialogInterface, which: Int) {
+        val b = prefs.edit().putBoolean(RouletteApp.PREF_NSFW, true).commit()
+        if ( ! b) {
+          toast(R.string.pref_write_error)
+        }
+      }
+    })
+    builder.setNegativeButton(R.string.pref_over19_no, new DialogInterface.OnClickListener {
+      override def onClick(dialog: DialogInterface, which: Int) {
+        val b = prefs.edit().putBoolean(RouletteApp.PREF_NSFW, false).commit()
+        if ( ! b) {
+          toast(R.string.pref_write_error)
+        }
+      }
+    })
+    builder.create().show()
   }
 
   private def addFrag(frag: Fragment, tag: String) {
@@ -158,5 +188,11 @@ class MainActivity extends BaseActivity with TypedViewHolder {
   private def toast(text: Int) {
     toastHandler.sendEmptyMessage(text)
     return
+  }
+
+  private def hasConnection: Boolean = {
+    val conn = getSystemService(Context.CONNECTIVITY_SERVICE).asInstanceOf[ConnectivityManager]
+    val net = conn.getActiveNetworkInfo
+    net != null && net.isConnected
   }
 }
