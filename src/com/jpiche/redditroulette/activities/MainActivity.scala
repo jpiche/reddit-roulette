@@ -6,27 +6,25 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import android.os.{Message, Handler, Bundle}
 import android.util.Log
 import android.widget.Toast
-import android.app.{AlertDialog, Fragment}
+import android.app.{Activity, AlertDialog, Fragment}
 import com.jpiche.redditroulette.reddit.{Thing, Subreddit}
 import scala.util.{Failure, Success}
 import android.view.{MenuItem, View}
 import android.os.Handler.Callback
-import com.jpiche.redditroulette.fragments.{WebFragment, ImageFragment, HomeFragment}
+import com.jpiche.redditroulette.fragments.{NsfwDialogFragment, WebFragment, ImageFragment, HomeFragment}
 import android.app.FragmentManager.OnBackStackChangedListener
 import com.testflightapp.lib.TestFlight
-import com.jpiche.redditroulette.{RouletteApp, R, TR, TypedViewHolder}
+import com.jpiche.redditroulette._
 import android.content.{Context, DialogInterface, Intent}
 import android.net.ConnectivityManager
+import scala.util.Failure
+import scala.util.Success
 
-final class MainActivity extends BaseActivity with TypedViewHolder {
+final class MainActivity extends Activity with Base with TypedViewHolder {
 
   private lazy val progress = findView(TR.progress)
-  private val toastHandler = new Handler(new Callback {
-    def handleMessage(msg: Message): Boolean = {
-      Toast.makeText(getApplicationContext, msg.what, Toast.LENGTH_LONG).show()
-      false
-    }
-  })
+  private lazy val manager = getFragmentManager
+
   private val progressHander = new Handler(new Handler.Callback {
     def handleMessage(msg: Message): Boolean = {
       progress.setVisibility(msg.what)
@@ -80,6 +78,7 @@ final class MainActivity extends BaseActivity with TypedViewHolder {
       case h@HomeFragment() => h.listener = homeListener
       case w@WebFragment() => w.listener = webListener
       case i@ImageFragment() => i.listener = imageListener
+      case _ => return
     }
   }
 
@@ -155,26 +154,7 @@ final class MainActivity extends BaseActivity with TypedViewHolder {
   private def checkPrefs() {
     if (prefs contains RouletteApp.PREF_NSFW) return
 
-    val builder = new AlertDialog.Builder(this)
-    builder.setTitle(R.string.pref_over19_alert_title)
-    builder.setMessage(R.string.pref_over19_alert_msg)
-    builder.setPositiveButton(R.string.pref_over19_yes, new DialogInterface.OnClickListener {
-      override def onClick(dialog: DialogInterface, which: Int) {
-        val b = prefs.edit().putBoolean(RouletteApp.PREF_NSFW, true).commit()
-        if ( ! b) {
-          toast(R.string.pref_write_error)
-        }
-      }
-    })
-    builder.setNegativeButton(R.string.pref_over19_no, new DialogInterface.OnClickListener {
-      override def onClick(dialog: DialogInterface, which: Int) {
-        val b = prefs.edit().putBoolean(RouletteApp.PREF_NSFW, false).commit()
-        if ( ! b) {
-          toast(R.string.pref_write_error)
-        }
-      }
-    })
-    builder.create().show()
+    NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
   }
 
   private def addFrag(frag: Fragment, tag: String) {
@@ -182,11 +162,6 @@ final class MainActivity extends BaseActivity with TypedViewHolder {
     t.replace(TR.container.id, frag, tag)
     t.addToBackStack(null)
     t.commit()
-    return
-  }
-
-  private def toast(text: Int) {
-    toastHandler.sendEmptyMessage(text)
     return
   }
 

@@ -11,14 +11,13 @@ final case class WebFragment() extends ThingFragment {
 
   var listener: Option[WebFragment.Listener] = None
 
-  private lazy val LOG_TAG = this.getClass.getSimpleName
   private lazy val webViewClient = new WebViewClient
   private lazy val webChromeClient = new WebChromeClient
 
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
-    if (thingUrl.isEmpty) {
+    if (thing.isEmpty) {
       listener map { _.onError() }
       return null
     }
@@ -33,8 +32,8 @@ final case class WebFragment() extends ThingFragment {
     web.setWebChromeClient(webChromeClient)
 
     web loadUrl {
-      if (savedInstanceState == null) thingUrl.get
-      else savedInstanceState.getString(ThingFragment.URL_KEY, thingUrl.get)
+      if (savedInstanceState == null) thing.get.url
+      else savedInstanceState.getString(Thing.KEY_URL, thing.get.url)
     }
 
     v
@@ -43,7 +42,7 @@ final case class WebFragment() extends ThingFragment {
   override def onSaveInstanceState(outState: Bundle) {
     super.onSaveInstanceState(outState)
     val web = getView.findView(TR.web)
-    outState.putString(ThingFragment.URL_KEY, web.getUrl)
+    outState.putString(Thing.KEY_URL, web.getUrl)
   }
 
   def webView = getView.findView(TR.web)
@@ -55,10 +54,7 @@ object WebFragment {
   def apply(listener: Option[Listener], thing: Thing): WebFragment = {
     val frag = new WebFragment()
     frag.listener = listener
-    val b = new Bundle()
-    b.putString(ThingFragment.URL_KEY, thing.url)
-    b.putString(ThingFragment.TITLE_KEY, thing.title)
-    frag.setArguments(b)
+    frag.setArguments(thing.toBundle)
     frag
   }
 

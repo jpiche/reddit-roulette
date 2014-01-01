@@ -1,30 +1,26 @@
 package com.jpiche.redditroulette.fragments
 
-import scalaz._, Scalaz._
 import android.app.Fragment
 import android.view.{MenuInflater, MenuItem, Menu}
-import com.jpiche.redditroulette.R
+import com.jpiche.redditroulette.{Base, R}
 import android.os.Bundle
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
+import com.jpiche.redditroulette.reddit.Thing
 
-abstract class ThingFragment extends Fragment {
+abstract class ThingFragment extends Fragment with Base {
 
-  protected var thingUrl: Option[String] = None
-
-  private lazy val LOG_TAG = this.getClass.getSimpleName
+  protected var thing: Option[Thing] = None
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
 
     val args = getArguments
     if (args != null) {
-      val title = args.getString(ThingFragment.TITLE_KEY, getResources.getString(R.string.app_name))
-      getActivity.getActionBar.setTitle(title)
-
-      val url = args.getString(ThingFragment.URL_KEY)
-      thingUrl = if (url == null) None else url.some
+      thing = Thing(args)
+      thing map { t =>
+        getActivity.getActionBar.setTitle(t.title)
+      }
     }
 
     setHasOptionsMenu(true)
@@ -37,16 +33,16 @@ abstract class ThingFragment extends Fragment {
 
   override def onOptionsItemSelected(item: MenuItem): Boolean =
     item.getItemId match {
-      case R.id.info if thingUrl.nonEmpty =>
-        Log.i(LOG_TAG, "info menu item")
-        val i = new Intent(Intent.ACTION_VIEW, Uri.parse(thingUrl.get))
+      case R.id.external if thing.nonEmpty =>
+        val i = new Intent(Intent.ACTION_VIEW, Uri.parse(thing.get.url))
         startActivity(i)
         true
+
+      case R.id.info if thing.nonEmpty =>
+        val dialog = ThingInfoDialogFragment(thing.get)
+        dialog.show(getFragmentManager, ThingInfoDialogFragment.FRAG_TAG)
+        true
+
       case _ => super.onOptionsItemSelected(item)
     }
-}
-
-object ThingFragment {
-  val URL_KEY = "URL_KEY"
-  val TITLE_KEY = "TITLE_KEY"
 }
