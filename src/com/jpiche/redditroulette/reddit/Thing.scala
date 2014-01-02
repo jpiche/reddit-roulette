@@ -27,10 +27,36 @@ case class Thing(
   visited: Boolean
 ) {
   lazy val isImg: Boolean = {
-    val d = List("i.imgur.com", "i.qkme.me") contains domain
+    val imgurAlbum = """imgur\.com/a/[a-zA-Z0-9]+$""".r.unanchored
+
+    val d = List(
+      "i.imgur.com",
+      "i.qkme.me",
+      "imgur.com",
+      "i.lvme.me",
+      "livememe.com"
+    ) contains domain
+
+    // don't load albums as images
+    val notAlbum = url match {
+      case imgurAlbum() => false
+      case _ => true
+    }
+
     val u = List(".jpg", ".jpeg", ".png") exists { x => url endsWith x }
-    d || u
+    (d && notAlbum) || u
   }
+
+  lazy val goodUrl: String = if (isImg) {
+    val imgur = """imgur\.com/(?:gallery/)?([a-zA-Z0-9]+)$""".r.unanchored
+    val livememe = """livememe\.com/([a-zA-Z0-9]+)\.?""".r.unanchored
+
+    url match {
+      case imgur(key) => "http://i.imgur.com/%s.jpg" format key
+      case livememe(key) => "http://i.lvme.com/%s.jpg" format key
+      case _ => url
+    }
+  } else url
 
   lazy val r_sub = "/r/%s" format subreddit
 
@@ -70,6 +96,7 @@ object Thing {
   val KEY_COMMENTS = "thing_comments"
   val KEY_VISITED = "thing_visited"
 
+  // bundles are kinda awful, but at least it maintains types (sorta)
   def apply(bundle: Bundle): Option[Thing] =
     if (bundle.containsKey(KEY_ID)
       && bundle.containsKey(KEY_URL)

@@ -28,11 +28,18 @@ final case class ImageFragment() extends ThingFragment {
     }
   })
 
+  private trait ImgCallback extends Callback {
+    def onSuccess() {
+      handler.sendEmptyMessage(View.GONE)
+      return
+    }
+  }
+
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
     if (thing.isEmpty) {
-      listener map { _.onError() }
+      listener map { _.onError(thing) }
       return null
     }
 
@@ -40,15 +47,23 @@ final case class ImageFragment() extends ThingFragment {
     val v = inflater.inflate(TR.layout.fragment_image, container, attachToRoot)
     val img = v.findView(TR.imageView)
 
-    picasso.load(Uri.parse(thing.get.url))
-      .into(img, new Callback {
+    picasso.load(Uri.parse(thing.get.goodUrl))
+      .into(img, new ImgCallback {
       def onError() {
-        listener map { _.onError() }
-        return
-      }
+        Log.w(LOG_TAG, "Error loading good url: %s" format thing.get.goodUrl)
 
-      def onSuccess() {
-        handler.sendEmptyMessage(View.GONE)
+        if (thing.get.goodUrl == thing.get.url) {
+          listener map { _.onError(thing) }
+
+        } else {
+          Log.w(LOG_TAG, "Trying again with url from API: %s" format thing.get.url)
+          picasso.load(Uri.parse(thing.get.url)).into(img, new ImgCallback {
+            def onError() {
+              listener map { _.onError(thing) }
+              return
+            }
+          })
+        }
         return
       }
     })
@@ -68,6 +83,6 @@ object ImageFragment {
   }
 
   trait Listener {
-    def onError(): Unit
+    def onError(thing: Option[Thing]): Unit
   }
 }

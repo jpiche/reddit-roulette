@@ -39,9 +39,18 @@ final class MainActivity extends Activity with Base with TypedViewHolder {
   }.some
 
   private lazy val imageListener = new ImageFragment.Listener {
-    def onError() {
+    def onError(thing: Option[Thing]) {
       manager.popBackStack()
-      toast(R.string.url_load_error)
+      thing match {
+        case Some(t) =>
+          Log.w(LOG_TAG, "Retrying URL with WebFragment: %s" format t.url)
+          runOnUiThread(new Runnable {
+            def run() = addFrag(WebFragment(webListener, t), WebFragment.FRAG_TAG)
+          })
+
+        case None =>
+          toast(R.string.url_load_error)
+      }
     }
   }.some
 

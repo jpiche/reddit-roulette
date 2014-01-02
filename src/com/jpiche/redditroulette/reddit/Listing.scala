@@ -7,7 +7,9 @@ case class Listing(
   kind: String,
   data: ListingData
 ) {
-  val children = data.children
+  // TODO: this should probably be a setting
+  lazy val children = data.children filterNot { _.data.isSelf }
+
   val hasChildren = ! children.isEmpty
 
   def random: Thing = {
