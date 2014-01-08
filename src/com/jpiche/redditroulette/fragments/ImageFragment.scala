@@ -2,12 +2,13 @@ package com.jpiche.redditroulette.fragments
 
 import com.jpiche.redditroulette.TypedResource._
 import android.view.{LayoutInflater, ViewGroup, View}
-import android.os.{Message, Handler, Bundle}
+import android.os.Bundle
 import com.squareup.picasso.{Callback, Picasso}
 import android.net.Uri
 import android.util.Log
-import com.jpiche.redditroulette.TR
+import com.jpiche.redditroulette.{FlingDirection, FlingListener, FragTag, TR}
 import com.jpiche.redditroulette.reddit.Thing
+import android.content.Context
 
 final case class ImageFragment() extends ThingFragment {
 
@@ -15,22 +16,9 @@ final case class ImageFragment() extends ThingFragment {
 
   private lazy val picasso = Picasso `with` getActivity
 
-  private val handler = new Handler(new Handler.Callback {
-    def handleMessage(msg: Message): Boolean = {
-      val v = getView
-      if (v == null) return false
-
-      val prog = getView.findView(TR.progress)
-      if (prog == null) return false
-
-      prog.setVisibility(msg.what)
-      false
-    }
-  })
-
   private trait ImgCallback extends Callback {
     def onSuccess() {
-      handler.sendEmptyMessage(View.GONE)
+      listener map { _.onFinished() }
       return
     }
   }
@@ -46,17 +34,23 @@ final case class ImageFragment() extends ThingFragment {
     val attachToRoot = false
     val v = inflater.inflate(TR.layout.fragment_image, container, attachToRoot)
     val img = v.findView(TR.imageView)
+    img.setOnTouchListener(new FlingListener {
+      def onFling(dir: FlingDirection) {
+        Log.d(LOG_TAG, s"fling: ${dir.toString}")
+        return
+      }
+    })
 
     picasso.load(Uri.parse(thing.get.goodUrl))
       .into(img, new ImgCallback {
       def onError() {
-        Log.w(LOG_TAG, "Error loading good url: %s" format thing.get.goodUrl)
+        Log.w(LOG_TAG, s"Error loading good url: ${thing.get.goodUrl}")
 
         if (thing.get.goodUrl == thing.get.url) {
           listener map { _.onError(thing) }
 
         } else {
-          Log.w(LOG_TAG, "Trying again with url from API: %s" format thing.get.url)
+          Log.w(LOG_TAG, s"Trying again with url from API: ${thing.get.url}")
           picasso.load(Uri.parse(thing.get.url)).into(img, new ImgCallback {
             def onError() {
               listener map { _.onError(thing) }
@@ -72,8 +66,7 @@ final case class ImageFragment() extends ThingFragment {
   }
 }
 
-object ImageFragment {
-  val FRAG_TAG = this.getClass.getSimpleName
+object ImageFragment extends FragTag {
 
   def apply(listener: Option[Listener], thing: Thing): ImageFragment = {
     val frag = new ImageFragment()
@@ -84,5 +77,6 @@ object ImageFragment {
 
   trait Listener {
     def onError(thing: Option[Thing]): Unit
+    def onFinished(): Unit
   }
 }

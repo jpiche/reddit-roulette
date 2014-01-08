@@ -3,8 +3,8 @@ package com.jpiche.redditroulette.fragments
 import com.jpiche.redditroulette.TypedResource._
 import android.view.{LayoutInflater, ViewGroup, View}
 import android.os.Bundle
-import android.webkit.{WebChromeClient, WebViewClient}
-import com.jpiche.redditroulette.TR
+import android.webkit.{WebView, WebChromeClient, WebViewClient}
+import com.jpiche.redditroulette.{FragTag, TR}
 import com.jpiche.redditroulette.reddit.Thing
 
 final case class WebFragment() extends ThingFragment {
@@ -12,7 +12,15 @@ final case class WebFragment() extends ThingFragment {
   var listener: Option[WebFragment.Listener] = None
 
   private lazy val webViewClient = new WebViewClient
-  private lazy val webChromeClient = new WebChromeClient
+  private lazy val webChromeClient = new WebChromeClient {
+    override def onProgressChanged(view: WebView, prog: Int) {
+      if (prog < 100)
+        listener map { _ onProgress prog }
+      else
+        listener map { _.onFinished() }
+      return
+    }
+  }
 
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
@@ -48,8 +56,7 @@ final case class WebFragment() extends ThingFragment {
   def webView = getView.findView(TR.web)
 }
 
-object WebFragment {
-  val FRAG_TAG = this.getClass.getSimpleName
+object WebFragment extends FragTag {
 
   def apply(listener: Option[Listener], thing: Thing): WebFragment = {
     val frag = new WebFragment()
@@ -60,5 +67,7 @@ object WebFragment {
 
   trait Listener {
     def onError(): Unit
+    def onFinished(): Unit
+    def onProgress(prog: Int): Unit
   }
 }

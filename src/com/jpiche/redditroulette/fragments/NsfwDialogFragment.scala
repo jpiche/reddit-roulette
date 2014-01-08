@@ -2,11 +2,11 @@ package com.jpiche.redditroulette.fragments
 
 import android.app.{Dialog, AlertDialog, DialogFragment}
 import android.os.Bundle
-import com.jpiche.redditroulette.{Base, RouletteApp, R}
+import com.jpiche.redditroulette._
 import android.content.DialogInterface
 
 
-final class NsfwDialogFragment extends DialogFragment with Base {
+final class NsfwDialogFragment extends DialogFragment with BaseFrag {
 
   override def onCreateDialog(inst: Bundle): Dialog = {
     val builder = new AlertDialog.Builder(getActivity)
@@ -32,7 +32,6 @@ final class NsfwDialogFragment extends DialogFragment with Base {
   }
 }
 
-object NsfwDialogFragment {
-  val FRAG_TAG = "NsfwDialogFragment"
+object NsfwDialogFragment extends FragTag {
   def apply() = new NsfwDialogFragment
 }

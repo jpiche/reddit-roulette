@@ -4,6 +4,7 @@
            parent="android:Theme.Holo.Light.DarkActionBar">
         <item name="android:actionBarStyle">@style/RRActionBar</item>
         <item name="android:buttonStyle">@style/RRButton</item>
+        <item name="android:windowBackground">@color/light_gray</item>
     </style>
 
     <!-- ActionBar styles -->

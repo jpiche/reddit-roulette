@@ -11,4 +11,11 @@
             android:key="allow_nsfw"
             />
 
+    <CheckBoxPreference
+            android:title="@string/pref_selfpost_title"
+            android:summary="@string/pref_selfpost_summary"
+            android:key="show_self"
+            android:defaultValue="false"
+            />
+
 </PreferenceScreen>

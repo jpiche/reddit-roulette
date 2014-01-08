@@ -1,33 +1,34 @@
 package com.jpiche.redditroulette.activities
 
 import scalaz._, Scalaz._
+import scalaz.std.boolean.unless
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import android.os.{Message, Handler, Bundle}
 import android.util.Log
-import android.widget.Toast
-import android.app.{Activity, AlertDialog, Fragment}
+import android.app.{Activity, Fragment}
 import com.jpiche.redditroulette.reddit.{Thing, Subreddit}
-import scala.util.{Failure, Success}
-import android.view.{MenuItem, View}
-import android.os.Handler.Callback
+import android.view.{WindowManager, MenuItem, View}
 import com.jpiche.redditroulette.fragments.{NsfwDialogFragment, WebFragment, ImageFragment, HomeFragment}
 import android.app.FragmentManager.OnBackStackChangedListener
 import com.testflightapp.lib.TestFlight
-import com.jpiche.redditroulette._
-import android.content.{Context, DialogInterface, Intent}
+import android.content.{Context, Intent}
 import android.net.ConnectivityManager
+import com.jpiche.redditroulette._
 import scala.util.Failure
+import scala.Some
 import scala.util.Success
 
-final class MainActivity extends Activity with Base with TypedViewHolder {
+final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   private lazy val progress = findView(TR.progress)
-  private lazy val manager = getFragmentManager
 
   private val progressHander = new Handler(new Handler.Callback {
     def handleMessage(msg: Message): Boolean = {
-      progress.setVisibility(msg.what)
+      msg.obj match {
+        case "percent" => progress setProgress msg.what
+        case _ => progress setVisibility msg.what
+      }
       false
     }
   })
@@ -52,12 +53,23 @@ final class MainActivity extends Activity with Base with TypedViewHolder {
           toast(R.string.url_load_error)
       }
     }
+    def onFinished() {
+      progressHander.sendEmptyMessage(View.GONE)
+      return
+    }
   }.some
 
   private lazy val webListener = new WebFragment.Listener {
     def onError() {
       manager.popBackStack()
       toast(R.string.url_load_error)
+    }
+    def onFinished() {
+      progressHander.sendEmptyMessage(View.GONE)
+      return
+    }
+    def onProgress(prog: Int) {
+      Message.obtain(progressHander, prog, "percent").sendToTarget()
     }
   }.some
 
@@ -67,6 +79,8 @@ final class MainActivity extends Activity with Base with TypedViewHolder {
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
+    getWindow.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
+
     setContentView(R.layout.main)
 
     if (savedInstanceState == null) {
@@ -75,8 +89,12 @@ final class MainActivity extends Activity with Base with TypedViewHolder {
       t.add(TR.container.id, homeFrag, HomeFragment.FRAG_TAG)
       t.commit()
 
-      checkPrefs()
+      unless (prefs contains RouletteApp.PREF_NSFW) {
+        NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
+      }
     }
+
+    progress.setMax(100)
 
     manager addOnBackStackChangedListener backStackListener
     shouldActionUp()
@@ -91,13 +109,19 @@ final class MainActivity extends Activity with Base with TypedViewHolder {
     }
   }
 
-  override def onNavigateUp(): Boolean = manager.popBackStackImmediate
+  override def onNavigateUp(): Boolean = {
+    manager.popBackStack()
+    true
+  }
 
   override def onBackPressed() {
+    // TODO: double check this code
     if (manager.getBackStackEntryCount > 0) {
       val tag = manager.getBackStackEntryAt(manager.getBackStackEntryCount - 1).getName
       val f = manager findFragmentByTag tag
-      if (f == null) manager.popBackStack()
+
+      if (f == null)
+        manager.popBackStack()
       else f match {
         case web@WebFragment() if web.webView.canGoBack => web.webView.goBack()
         case _ => manager.popBackStack()
@@ -114,9 +138,17 @@ final class MainActivity extends Activity with Base with TypedViewHolder {
         val i = new Intent(this, classOf[SettingsActivity])
         startActivity(i)
         true
+
       case R.id.about =>
         Log.i(LOG_TAG, "about menu item")
         true
+
+      case R.id.login =>
+        Log.i(LOG_TAG, "login clicked")
+        val i = new Intent(this, classOf[LoginActivity])
+        startActivity(i)
+        true
+
       case _ => super.onOptionsItemSelected(item)
     }
 
@@ -134,8 +166,7 @@ final class MainActivity extends Activity with Base with TypedViewHolder {
 
     progressHander.sendEmptyMessage(View.VISIBLE)
 
-    val allowNsfw = prefs.getBoolean(RouletteApp.PREF_NSFW, false)
-    Subreddit.random(allowNsfw) map {
+    Subreddit.random map {
       _.next andThen {
         case _ =>
           progressHander.sendEmptyMessage(View.GONE)
@@ -154,16 +185,15 @@ final class MainActivity extends Activity with Base with TypedViewHolder {
         case Failure(e) =>
           Log.e(LOG_TAG, "api exception: %s" format e)
           toast(R.string.api_load_error)
+
+          val home = manager.findFragmentByTag(HomeFragment.FRAG_TAG).asInstanceOf[HomeFragment]
+          if (home != null) {
+            home.showBtn()
+          }
       }
     }
 
     return
-  }
-
-  private def checkPrefs() {
-    if (prefs contains RouletteApp.PREF_NSFW) return
-
-    NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
   }
 
   private def addFrag(frag: Fragment, tag: String) {

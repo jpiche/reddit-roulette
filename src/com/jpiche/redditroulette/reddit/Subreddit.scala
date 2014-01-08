@@ -3,7 +3,7 @@ package com.jpiche.redditroulette.reddit
 import argonaut._, Argonaut._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
-import com.jpiche.redditroulette.{Db, Web}
+import com.jpiche.redditroulette.{Prefs, Db, Web}
 import scala.concurrent.{Future, future}
 import android.util.Log
 
@@ -35,6 +35,7 @@ object Subreddit {
 
   private val defaultSubs = List(
     Subreddit("earthporn"),
+    Subreddit("spaceporn"),
     Subreddit("aww"),
     Subreddit("puppies"),
     Subreddit("cats"),
@@ -44,11 +45,11 @@ object Subreddit {
     Subreddit("ginger", nsfw = true)
   )
 
-  def random(nsfw: Boolean)(implicit db: Db): Future[Subreddit] = future {
+  def random(implicit db: Db, prefs: Prefs): Future[Subreddit] = future {
     if (db.countSubs == 0) {
       db add defaultSubs
     }
-    val subs = db allSubs nsfw
+    val subs = db allSubs prefs.allowNsfw
 
     val i = Random.nextInt(subs.size)
     subs(i)

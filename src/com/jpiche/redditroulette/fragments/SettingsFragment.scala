@@ -2,9 +2,12 @@ package com.jpiche.redditroulette.fragments
 
 import android.preference.PreferenceFragment
 import android.os.Bundle
-import com.jpiche.redditroulette.{RouletteApp, R}
+import com.jpiche.redditroulette._
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener
+import android.content.SharedPreferences
+import android.util.Log
 
-final class SettingsFragment extends PreferenceFragment {
+final case class SettingsFragment() extends PreferenceFragment with BaseFrag with OnSharedPreferenceChangeListener {
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
@@ -12,4 +15,21 @@ final class SettingsFragment extends PreferenceFragment {
     getPreferenceManager.setSharedPreferencesName(RouletteApp.PREF_NAME)
     addPreferencesFromResource(R.xml.preferences)
   }
+
+  override def onResume() {
+    super.onResume()
+    getPreferenceManager.getSharedPreferences.registerOnSharedPreferenceChangeListener(this)
+  }
+
+  override def onPause() {
+    super.onPause()
+    getPreferenceManager.getSharedPreferences.unregisterOnSharedPreferenceChangeListener(this)
+  }
+
+  override def onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String) {
+    Log.d(LOG_TAG, "pref <%s> changed" format key)
+    return
+  }
 }
+
+object SettingsFragment extends FragTag

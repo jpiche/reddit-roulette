@@ -4,25 +4,25 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.{Future, future}
 import com.squareup.okhttp.OkHttpClient
-import java.net.URL
+import java.net.{URLEncoder, URL}
 import java.io.{ByteArrayOutputStream, InputStream}
 import scala.annotation.tailrec
 import android.util.Log
 
-object Web {
+object Web extends LogTag {
+
   private val BUFFER_SIZE = 0x1000
 
-  private lazy val LOG_TAG = this.getClass.getSimpleName
   private lazy val client = new OkHttpClient
 
-  def get(url: String): Future[String] = {
+  @inline def get(url: String): Future[String] = {
     get(new URL(url))
   }
 
   def get(url: URL): Future[String] = future {
 
     val conn = client.open(url)
-    conn.setRequestProperty("User-Agent", "redditroulette/0.1 by jpiche")
+    conn.setRequestProperty("User-Agent", RouletteApp.USER_AGENT)
 
     val in = conn.getInputStream
     try {

@@ -26,7 +26,7 @@ case class Thing(
   comments: Int,
   visited: Boolean
 ) {
-  lazy val isImg: Boolean = {
+  val isImg: Boolean = {
     val imgurAlbum = """imgur\.com/a/[a-zA-Z0-9]+$""".r.unanchored
 
     val d = List(
@@ -47,7 +47,7 @@ case class Thing(
     (d && notAlbum) || u
   }
 
-  lazy val goodUrl: String = if (isImg) {
+  val goodUrl: String = if (isImg) {
     val imgur = """imgur\.com/(?:gallery/)?([a-zA-Z0-9]+)$""".r.unanchored
     val livememe = """livememe\.com/([a-zA-Z0-9]+)\.?""".r.unanchored
 
@@ -58,7 +58,7 @@ case class Thing(
     }
   } else url
 
-  lazy val r_sub = "/r/%s" format subreddit
+  val r_sub = "/r/%s" format subreddit
 
   lazy val toBundle = {
     val b = new Bundle()

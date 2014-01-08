@@ -26,12 +26,13 @@ libraryDependencies ++= Seq(
   "org.scalaz" %% "scalaz-core" % "7.0.5",
   "com.squareup.okhttp" % "okhttp" % "1.2.1",
   "com.squareup.picasso" % "picasso" % "2.1.1",
-  "io.argonaut" %% "argonaut" % "6.0.1"
+  "io.argonaut" %% "argonaut" % "6.0.1",
+  "com.netaporter" %% "scala-uri" % "0.4.1-SNAPSHOT"
 )
 
 resolvers ++= Seq(
   "sbt-plugin-releases" at "http://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/",
-  "spray" at "http://repo.spray.io/"
+  "Sonatype OSS" at "https://oss.sonatype.org/content/repositories/public"
 )
 
 useProguard in Android := true

@@ -1,12 +1,13 @@
 package com.jpiche.redditroulette.fragments
 
 import android.app.{AlertDialog, Dialog, DialogFragment}
-import com.jpiche.redditroulette.Base
+import com.jpiche.redditroulette.{FragTag, BaseFrag}
 import android.os.Bundle
 import com.jpiche.redditroulette.reddit.Thing
+import android.util.Log
 
 
-final class ThingInfoDialogFragment extends DialogFragment with Base {
+final class ThingInfoDialogFragment extends DialogFragment with BaseFrag {
 
   override def onCreateDialog(inst: Bundle): Dialog = {
     val builder = new AlertDialog.Builder(thisContext)
@@ -23,8 +24,7 @@ final class ThingInfoDialogFragment extends DialogFragment with Base {
   }
 }
 
-object ThingInfoDialogFragment {
-  val FRAG_TAG = "ThingInfoDialogFragment"
+object ThingInfoDialogFragment extends FragTag {
 
   def apply(thing: Thing) = {
     val frag = new ThingInfoDialogFragment

@@ -1,14 +1,14 @@
 package com.jpiche.redditroulette.fragments
 
-import android.app.Fragment
 import android.view.{MenuInflater, MenuItem, Menu}
-import com.jpiche.redditroulette.{Base, R}
+import com.jpiche.redditroulette.{BaseFrag, R}
 import android.os.Bundle
 import android.content.Intent
 import android.net.Uri
 import com.jpiche.redditroulette.reddit.Thing
+import android.app.Fragment
 
-abstract class ThingFragment extends Fragment with Base {
+abstract class ThingFragment extends Fragment with BaseFrag {
 
   protected var thing: Option[Thing] = None
 

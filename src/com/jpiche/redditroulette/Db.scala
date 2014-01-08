@@ -6,7 +6,7 @@ import com.jpiche.redditroulette.reddit.{Thing, Subreddit}
 import org.joda.time.DateTime
 
 
-trait Db extends SQLiteOpenHelper {
+sealed trait Db extends SQLiteOpenHelper {
 
   override def onCreate(db: SQLiteDatabase) {
     db.execSQL(Db.subreddit.CREATE)
@@ -25,6 +25,7 @@ trait Db extends SQLiteOpenHelper {
     val values = new ContentValues()
     values.put(Db.things.KEY_ID, thing.id)
     values.put(Db.things.KEY_VISITED, DateTime.now.getMillis.toDouble)
+    values.put(Db.things.KEY_ISSELF, thing.isSelf)
 
     db.insert(Db.things.TABLE, null, values)
     db.close()
@@ -122,19 +123,22 @@ object Db extends DbTypes {
     val KEY_PK = "pk"
     val KEY_ID = "id"
     val KEY_VISITED = "visited"
+    val KEY_ISSELF = "is_self"
 
     private val COLS = Map(
       KEY_PK -> TYPE_PK,
       KEY_ID -> TYPE_TEXT,
-      KEY_VISITED -> TYPE_INT
+      KEY_VISITED -> TYPE_INT,
+      KEY_ISSELF -> TYPE_INT
     )
 
     val CREATE = "CREATE TABLE %s (%s) " format (TABLE, colsToString(COLS))
     val SELECT = "SELECT %s FROM %s " format (KEY_ID, TABLE)
+    val SELECT_NOSELF = SELECT + "WHERE %s = %d".format(KEY_ISSELF, 0)
   }
 }
 
-trait DbTypes {
+sealed trait DbTypes {
   val TYPE_PK = "INTEGER PRIMARY KEY"
   val TYPE_TEXT = "TEXT"
   val TYPE_INT = "INTEGER"
