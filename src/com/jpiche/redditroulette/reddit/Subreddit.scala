@@ -19,12 +19,22 @@ case class Subreddit(
   lazy val url = "http://www.reddit.com/r/%s/" format name
   lazy val hot = url + "hot.json"
 
-  def next(implicit webSettings: WebSettings): Future[(WebData, Thing)] =
+  def next(implicit webSettings: WebSettings, prefs: Prefs): Future[(WebData, Thing)] =
     Web.get(hot) collect {
       case web@WebData(_, _) =>
         web.asString.decodeOption[Listing] match {
           case Some(listing: Listing) if listing.hasChildren => {
-            val t = listing.random
+            val children = if (prefs.showSelf)
+              listing.children
+            else
+              listing.children filterNot { _.data.isSelf }
+
+            val t = {
+              // TODO: Save off selected thing and don't grab it again for a bit.
+              val i = Random.nextInt(children.length)
+              children(i).data
+            }
+
             Log.d(LOG_TAG, "collecting thing with url: %s" format t.url)
             (web, t)
           }
