@@ -5,6 +5,7 @@ import scalaz._, Scalaz._
 import android.graphics.{Bitmap, BitmapFactory}
 import com.jpiche.redditroulette.LogTag
 import android.util.Log
+import android.opengl.GLES20
 
 
 sealed trait WebResult {
@@ -20,6 +21,13 @@ case class WebFail(conn: HttpURLConnection) extends WebResult {
 
 case class WebData(conn: HttpURLConnection, data: Array[Byte]) extends WebResult with ContentTypeParser with LogTag {
   lazy val asString = new String(data, charset | "UTF-8")
+  lazy val OPENGL_MAX: Int = {
+    // Build an array with one element, and have that be the default in case
+    // glGetIntegerv doesn't actually set a value
+    val maxTextureSize = Array(2048)
+    GLES20.glGetIntegerv(GLES20.GL_MAX_TEXTURE_SIZE, maxTextureSize, 0)
+    maxTextureSize(0)
+  }
 
   private lazy val parsedContentType = parseContentType(conn.getContentType)
   lazy val charset: Option[String] = parsedContentType match {
@@ -34,16 +42,16 @@ case class WebData(conn: HttpURLConnection, data: Array[Byte]) extends WebResult
   }
 
   def toBitmap: Bitmap = {
-    val OPENGL_MAX = 2048.0
     val bmp = BitmapFactory.decodeByteArray(data, 0, data.length)
     val max = Math.max(bmp.getHeight, bmp.getWidth)
 
+    Log.d(LOG_TAG, s"Image max: $max; OPENGL_MAX: $OPENGL_MAX")
+
     // If the image is too large to draw, then resize it.
     if (max > OPENGL_MAX) {
-      Log.d(LOG_TAG, s"Image max: $max, resizing to $OPENGL_MAX")
       bmp.recycle()
 
-      val scaleFactorPowerOfTwo: Double = Math.log(max / OPENGL_MAX) / Math.log(2)
+      val scaleFactorPowerOfTwo: Double = Math.log(max.toDouble / OPENGL_MAX.toDouble) / Math.log(2)
       val scaleFactor = Math.round(Math.pow(2, Math.ceil(scaleFactorPowerOfTwo)))
       Log.d(LOG_TAG, s"Image resize using scaleFactorPowerOfTwo: $scaleFactorPowerOfTwo, and scaleFactor: $scaleFactor")
 
