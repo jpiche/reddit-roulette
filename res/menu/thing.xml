@@ -11,6 +11,12 @@
           android:showAsAction="ifRoom"
             />
 
+    <item android:id="@+id/next"
+          android:icon="@android:drawable/ic_media_next"
+          android:title="@string/menu_next"
+          android:showAsAction="ifRoom"
+            />
+
     <item android:id="@+id/external"
           android:title="@string/menu_external"
           android:showAsAction="never"

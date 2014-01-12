@@ -61,7 +61,7 @@ case class Thing(
   val r_sub = "/r/%s" format subreddit
 
   lazy val toBundle = {
-    val b = new Bundle()
+    val b = new Bundle(1)
     b.putString(Thing.THING_KEY, this.asJson.nospaces)
     b
   }

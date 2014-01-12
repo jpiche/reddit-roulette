@@ -11,6 +11,7 @@ import android.app.Fragment
 abstract class ThingFragment extends Fragment with BaseFrag {
 
   protected var thing: Option[Thing] = None
+  var listener: Option[ThingListener] = None
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
@@ -43,6 +44,17 @@ abstract class ThingFragment extends Fragment with BaseFrag {
         dialog.show(getFragmentManager, ThingInfoDialogFragment.FRAG_TAG)
         true
 
+      case R.id.next =>
+        listener map { _.onNext() }
+        true
+
       case _ => super.onOptionsItemSelected(item)
     }
+}
+
+trait ThingListener {
+  def onError(thing: Option[Thing]): Unit
+  def onFinished(): Unit
+  def onProgress(prog: Int): Unit
+  def onNext(): Unit
 }

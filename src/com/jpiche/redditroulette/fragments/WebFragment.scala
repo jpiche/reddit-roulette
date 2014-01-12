@@ -10,8 +10,6 @@ import android.util.Log
 
 final case class WebFragment() extends ThingFragment {
 
-  var listener: Option[WebFragment.Listener] = None
-
   private lazy val webViewClient = new WebViewClient
   private lazy val webChromeClient = new WebChromeClient {
     override def onProgressChanged(view: WebView, prog: Int) {
@@ -28,7 +26,7 @@ final case class WebFragment() extends ThingFragment {
                             savedInstanceState: Bundle): View = {
     if (thing.isEmpty) {
       Log.w(LOG_TAG, "Thing is empty")
-      listener map { _.onError() }
+      listener map { _.onError(thing) }
       return null
     }
 
@@ -61,16 +59,10 @@ final case class WebFragment() extends ThingFragment {
 object WebFragment extends FragTag {
   private val URL_KEY = "URL_KEY"
 
-  def apply(listener: Option[Listener], thing: Thing): WebFragment = {
+  def apply(listener: Option[ThingListener], thing: Thing): WebFragment = {
     val frag = new WebFragment()
     frag.listener = listener
     frag.setArguments(thing.toBundle)
     frag
-  }
-
-  trait Listener {
-    def onError(): Unit
-    def onFinished(): Unit
-    def onProgress(prog: Int): Unit
   }
 }

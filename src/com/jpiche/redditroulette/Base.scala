@@ -6,6 +6,7 @@ import android.os.Handler.Callback
 import android.widget.Toast
 import android.app.{Activity, Fragment}
 import android.view.{View, Window, WindowManager}
+import com.jpiche.redditroulette.net.WebSettings
 
 sealed trait Base extends LogTag {
 
@@ -35,6 +36,8 @@ sealed trait Base extends LogTag {
   }
 
   protected implicit def prefs = Prefs(thisContext)
+
+  protected implicit lazy val webSettings = WebSettings(RouletteApp.USER_AGENT)
 }
 
 trait BaseAct extends Base { this: Activity =>

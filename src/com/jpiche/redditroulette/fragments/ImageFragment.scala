@@ -1,27 +1,28 @@
 package com.jpiche.redditroulette.fragments
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import com.jpiche.redditroulette.TypedResource._
 import android.view.{LayoutInflater, ViewGroup, View}
-import android.os.Bundle
+import android.os.{Bundle, Handler}
 import com.squareup.picasso.{Callback, Picasso}
 import android.net.Uri
 import android.util.Log
-import com.jpiche.redditroulette.{FlingDirection, FlingListener, FragTag, TR}
+import com.jpiche.redditroulette._
 import com.jpiche.redditroulette.reddit.Thing
 import android.content.Context
+import com.jpiche.redditroulette.net.{WebFail, WebData, Web}
+import scala.util.{Failure, Success}
 
 final case class ImageFragment() extends ThingFragment {
 
-  var listener: Option[ImageFragment.Listener] = None
-
   private lazy val picasso = Picasso `with` getActivity
 
-  private trait ImgCallback extends Callback {
-    def onSuccess() {
-      listener map { _.onFinished() }
-      return
-    }
-  }
+//  private trait ImgCallback extends Callback {
+//    def onSuccess() {
+//      listener map { _.onFinished() }
+//      return
+//    }
+//  }
 
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
@@ -37,10 +38,35 @@ final case class ImageFragment() extends ThingFragment {
     img.setOnTouchListener(new FlingListener {
       def onFling(dir: FlingDirection) {
         Log.d(LOG_TAG, s"fling: ${dir.toString}")
+        dir match {
+          case FlingLeft => listener map { _.onNext() }
+          case _ =>
+        }
         return
       }
     })
 
+    val handler = new Handler()
+
+    Web.get(thing.get.goodUrl) onComplete {
+      case Success(web: WebData) =>
+        handler.post(new Runnable {
+          def run() {
+            img.setImageBitmap(web.toBitmap)
+          }
+        })
+        listener map { _.onFinished() }
+
+      case Success(fail: WebFail) =>
+        Log.e(LOG_TAG, fail.errorMessage)
+        listener map { _.onError(thing) }
+
+      case Failure(e) =>
+        Log.e(LOG_TAG, s"api exception loading url (${thing.get.goodUrl}: $e")
+        listener map { _.onError(thing) }
+    }
+
+    /*
     picasso.load(Uri.parse(thing.get.goodUrl))
       .into(img, new ImgCallback {
       def onError() {
@@ -61,6 +87,7 @@ final case class ImageFragment() extends ThingFragment {
         return
       }
     })
+    */
 
     v
   }
@@ -68,15 +95,10 @@ final case class ImageFragment() extends ThingFragment {
 
 object ImageFragment extends FragTag {
 
-  def apply(listener: Option[Listener], thing: Thing): ImageFragment = {
+  def apply(listener: Option[ThingListener], thing: Thing): ImageFragment = {
     val frag = new ImageFragment()
     frag.listener = listener
     frag.setArguments(thing.toBundle)
     frag
-  }
-
-  trait Listener {
-    def onError(thing: Option[Thing]): Unit
-    def onFinished(): Unit
   }
 }

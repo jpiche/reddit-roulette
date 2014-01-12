@@ -3,9 +3,11 @@ package com.jpiche.redditroulette.reddit
 import argonaut._, Argonaut._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
-import com.jpiche.redditroulette.{Prefs, Db, Web}
+import com.jpiche.redditroulette._
 import scala.concurrent.{Future, future}
 import android.util.Log
+import scala.Some
+import com.jpiche.redditroulette.net._
 
 
 case class Subreddit(
@@ -17,18 +19,19 @@ case class Subreddit(
   lazy val url = "http://www.reddit.com/r/%s/" format name
   lazy val hot = url + "hot.json"
 
-  def next: Future[Thing] =
-    Web.get(hot) map {
-      _.decodeOption[Listing] match {
-        case Some(listing: Listing) if listing.hasChildren => {
-          val t = listing.random
-          Log.d(LOG_TAG, "collecting thing with url: %s" format t.url)
-          t
+  def next(implicit webSettings: WebSettings): Future[(WebData, Thing)] =
+    Web.get(hot) collect {
+      case web@WebData(_, _) =>
+        web.asString.decodeOption[Listing] match {
+          case Some(listing: Listing) if listing.hasChildren => {
+            val t = listing.random
+            Log.d(LOG_TAG, "collecting thing with url: %s" format t.url)
+            (web, t)
+          }
+          case None => throw new Exception
         }
-        case None => throw new Exception
-      }
+      case fail@WebFail(_) => throw new Exception(fail.errorMessage)
     }
-
 }
 
 object Subreddit {
