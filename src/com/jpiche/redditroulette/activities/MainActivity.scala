@@ -50,6 +50,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
           })
 
         case None =>
+          Log.w(LOG_TAG, "Thing is empty")
           toast(R.string.url_load_error)
       }
     }

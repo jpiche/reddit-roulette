@@ -32,7 +32,7 @@ libraryDependencies ++= Seq(
 
 resolvers ++= Seq(
   "sbt-plugin-releases" at "http://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/",
-  "Sonatype OSS" at "https://oss.sonatype.org/content/repositories/public"
+  Resolver.sonatypeRepo("public")
 )
 
 useProguard in Android := true

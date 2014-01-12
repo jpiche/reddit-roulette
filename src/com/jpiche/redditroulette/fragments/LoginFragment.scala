@@ -7,10 +7,9 @@ import com.jpiche.redditroulette.{RouletteApp, FragTag, TR, BaseFrag}
 import android.webkit.{WebView, WebChromeClient, WebViewClient}
 import android.view.{View, ViewGroup, LayoutInflater}
 import android.os.Bundle
-import com.jpiche.redditroulette.reddit.Thing
 import com.netaporter.uri.Uri.parse
 
-class LoginFragment extends Fragment with BaseFrag {
+final case class LoginFragment() extends Fragment with BaseFrag {
 
   var listener: Option[LoginFragment.Listener] = None
 
@@ -68,7 +67,7 @@ class LoginFragment extends Fragment with BaseFrag {
   override def onSaveInstanceState(outState: Bundle) {
     super.onSaveInstanceState(outState)
     val web = getView.findView(TR.web)
-    outState.putString(Thing.KEY_URL, web.getUrl)
+    outState.putString(LoginFragment.URL_KEY, web.getUrl)
   }
 
   def webView = getView.findView(TR.web)

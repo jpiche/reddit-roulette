@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.webkit.{WebView, WebChromeClient, WebViewClient}
 import com.jpiche.redditroulette.{FragTag, TR}
 import com.jpiche.redditroulette.reddit.Thing
+import android.util.Log
 
 final case class WebFragment() extends ThingFragment {
 
@@ -26,6 +27,7 @@ final case class WebFragment() extends ThingFragment {
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
     if (thing.isEmpty) {
+      Log.w(LOG_TAG, "Thing is empty")
       listener map { _.onError() }
       return null
     }
@@ -41,7 +43,7 @@ final case class WebFragment() extends ThingFragment {
 
     web loadUrl {
       if (savedInstanceState == null) thing.get.url
-      else savedInstanceState.getString(Thing.KEY_URL, thing.get.url)
+      else savedInstanceState.getString(WebFragment.URL_KEY, thing.get.url)
     }
 
     v
@@ -50,13 +52,14 @@ final case class WebFragment() extends ThingFragment {
   override def onSaveInstanceState(outState: Bundle) {
     super.onSaveInstanceState(outState)
     val web = getView.findView(TR.web)
-    outState.putString(Thing.KEY_URL, web.getUrl)
+    outState.putString(WebFragment.URL_KEY, web.getUrl)
   }
 
   def webView = getView.findView(TR.web)
 }
 
 object WebFragment extends FragTag {
+  private val URL_KEY = "URL_KEY"
 
   def apply(listener: Option[Listener], thing: Thing): WebFragment = {
     val frag = new WebFragment()
