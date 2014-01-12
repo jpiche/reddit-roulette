@@ -24,6 +24,17 @@ final case class ImageFragment() extends ThingFragment {
 //    }
 //  }
 
+  private lazy val flingListener = new FlingListener {
+    def onFling(dir: FlingDirection) {
+      Log.d(LOG_TAG, s"fling: ${dir.toString}")
+      dir match {
+        case FlingLeft => listener map { _.onNext() }
+        case _ =>
+      }
+      return
+    }
+  }
+
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
@@ -35,16 +46,6 @@ final case class ImageFragment() extends ThingFragment {
     val attachToRoot = false
     val v = inflater.inflate(TR.layout.fragment_image, container, attachToRoot)
     val img = v.findView(TR.imageView)
-    img.setOnTouchListener(new FlingListener {
-      def onFling(dir: FlingDirection) {
-        Log.d(LOG_TAG, s"fling: ${dir.toString}")
-        dir match {
-          case FlingLeft => listener map { _.onNext() }
-          case _ =>
-        }
-        return
-      }
-    })
 
     val handler = new Handler()
 
@@ -90,6 +91,18 @@ final case class ImageFragment() extends ThingFragment {
     */
 
     v
+  }
+
+  override def onResume() {
+    super.onResume()
+
+    val img = getView.findView(TR.imageView)
+    img.setOnTouchListener {
+      if (prefs.swipeLeftNext)
+        flingListener
+      else
+        null
+    }
   }
 }
 

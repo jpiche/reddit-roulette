@@ -29,4 +29,6 @@
     <string name="pref_write_error">Error writing preferences; please try again.</string>
     <string name="pref_selfpost_title">Show self posts</string>
     <string name="pref_selfpost_summary">By default, self posts are filtered out; this will keep them in the mix.</string>
+    <string name="pref_swipe_left_title">Swipe Left for Next Post</string>
+    <string name="pref_swipe_left_summary">Swiping left on an image will load the next post. This will not work on web content.</string>
 </resources>

@@ -8,7 +8,7 @@ import android.os.{Message, Handler, Bundle}
 import android.util.Log
 import android.app.{Activity, Fragment}
 import com.jpiche.redditroulette.reddit.{Thing, Subreddit}
-import android.view.{ViewGroup, WindowManager, MenuItem, View}
+import android.view.{WindowManager, MenuItem, View}
 import com.jpiche.redditroulette.fragments._
 import android.app.FragmentManager.OnBackStackChangedListener
 import com.testflightapp.lib.TestFlight
@@ -16,15 +16,16 @@ import android.content.{Context, Intent}
 import android.net.ConnectivityManager
 import com.jpiche.redditroulette._
 import scala.util.{Failure, Success}
-import scala.concurrent.future
-import com.jpiche.redditroulette.views.ExtendedFrameLayout
 import com.jpiche.redditroulette.net.WebData
+import java.util.concurrent.atomic.AtomicBoolean
 
 
 final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   private lazy val progressLayout = findView(TR.progressLayout)
   private lazy val progress = findView(TR.progress)
+
+  private val isLoading = new AtomicBoolean(false)
 
   private val progressHandler = new Handler(new Handler.Callback {
     def handleMessage(msg: Message): Boolean = {
@@ -54,6 +55,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
     def onFinished() {
       progressHandler.sendEmptyMessage(View.GONE)
+      isLoading.set(false)
       return
     }
 
@@ -92,22 +94,13 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     getWindow.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
     setContentView(R.layout.main)
 
-    val params = new ViewGroup.LayoutParams(
-      ViewGroup.LayoutParams.MATCH_PARENT,
-      ViewGroup.LayoutParams.MATCH_PARENT
-    )
-    val frame = ExtendedFrameLayout(this)
-    frame.setId(R.id.container)
-    val mainFrame = findView(TR.main)
-    mainFrame.addView(frame, 0, params)
-
     if (savedInstanceState == null) {
       val homeFrag = HomeFragment(homeListener)
       val t = manager.beginTransaction()
       t.add(R.id.container, homeFrag, HomeFragment.FRAG_TAG)
       t.commit()
 
-      unless (prefs contains RouletteApp.PREF_NSFW) {
+      unless (prefs contains Prefs.PREF_NSFW) {
         NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
       }
     }
@@ -179,13 +172,17 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   }
 
   // make it a lazy val so that it only gets sent once per instance
-  private lazy val checkpoint = future {
+  private lazy val checkpoint =
     TestFlight.passCheckpoint(RouletteApp.CHECKPOINT_PLAY)
-  }
 
   private def next(pop: Boolean) {
-    Log.d(LOG_TAG, "loadItem")
-    if ( ! hasConnection) {
+    if (isLoading.get()) {
+      Log.i(LOG_TAG, "Ran next() while post was still loading")
+      return
+    }
+    isLoading.set(true)
+
+    unless(hasConnection) {
       toast(R.string.no_internet)
       return
     }
@@ -225,7 +222,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   private def addFrag(frag: Fragment, tag: String) {
     val t = manager.beginTransaction()
-    //t.setCustomAnimations(R.animator.left_slide_in, R.animator.left_slide_out)
     t.replace(R.id.container, frag, tag)
     t.addToBackStack(null)
     t.commit()

@@ -12,7 +12,7 @@ final case class SettingsFragment() extends PreferenceFragment with BaseFrag wit
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
 
-    getPreferenceManager.setSharedPreferencesName(RouletteApp.PREF_NAME)
+    getPreferenceManager.setSharedPreferencesName(Prefs.PREF_NAME)
     addPreferencesFromResource(R.xml.preferences)
   }
 
