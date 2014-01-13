@@ -8,24 +8,7 @@
     <item android:id="@+id/settings"
           android:icon="@android:drawable/ic_menu_preferences"
           android:title="@string/menu_settings"
-          android:showAsAction="never"
+          android:showAsAction="ifRoom"
           />
 
-    <item android:id="@+id/login"
-          android:icon="@android:drawable/ic_menu_preferences"
-          android:title="@string/menu_login"
-          android:showAsAction="never"
-            />
-
-    <item android:id="@+id/logout"
-          android:icon="@android:drawable/ic_menu_preferences"
-          android:title="@string/menu_logout"
-          android:showAsAction="never"
-            />
-
-    <item android:id="@+id/about"
-          android:icon="@android:drawable/ic_menu_info_details"
-          android:title="@string/menu_about"
-          android:showAsAction="never"
-          />
 </menu>

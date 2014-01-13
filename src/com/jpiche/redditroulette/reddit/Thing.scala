@@ -3,6 +3,10 @@ package com.jpiche.redditroulette.reddit
 import scalaz._, Scalaz._
 import argonaut._, Argonaut._
 import android.os.Bundle
+import android.text.{Html, Spanned}
+import org.joda.time.{DateTimeZone, Duration, DateTime}
+import com.jpiche.redditroulette.LogTag
+import android.util.Log
 
 case class ThingItem(kind: String, data: Thing)
 object ThingItem {
@@ -17,15 +21,17 @@ case class Thing(
   author: String,
   score: Int,
   over18: Boolean,
+  downs: Int,
   isSelf: Boolean,
   permalink: String,
   name: String,
   url: String,
   title: String,
   created: Long,
+  ups: Int,
   comments: Int,
   visited: Boolean
-) {
+) extends LogTag {
   val isImg: Boolean = {
     val imgurAlbum = """imgur\.com/a/[a-zA-Z0-9]+$""".r.unanchored
 
@@ -58,12 +64,47 @@ case class Thing(
     }
   } else url
 
-  val r_sub = "/r/%s" format subreddit
+  val r_sub = s"/r/$subreddit"
+  val full_permalink = s"http://www.reddit.com$permalink"
+  val scoreInfo = s"$score ($ups Up, $downs Down)"
 
   lazy val toBundle = {
     val b = new Bundle(1)
     b.putString(Thing.THING_KEY, this.asJson.nospaces)
     b
+  }
+
+  lazy val timeHuman: String = {
+    val now = DateTime.now(DateTimeZone.UTC).getMillis
+    val dur = new Duration(created * 1000, now)
+
+    val days = dur.getStandardDays
+    val hours = dur.getStandardHours
+    val mins = dur.getStandardMinutes
+
+    Log.i(LOG_TAG, s"Duration from (created: $created, now: $now): $days d, $hours h, $mins m")
+
+    val dayWord = if (days == 0) "day" else "days"
+    val hourWord = if (hours == 0) "hour" else "hours"
+    val minWord = if (mins == 0) "minute" else "minutes"
+
+    if (days > 0) {
+      s"$days $dayWord ago"
+
+    } else if (hours > 0) {
+      val m = mins - (hours * 60)
+      s"$hours $hourWord, $m $minWord ago"
+
+    } else if (mins > 0) {
+      s"$mins $minWord ago"
+    } else {
+      "moments ago"
+    }
+  }
+
+  lazy val info: Spanned = {
+    val s = s"submitted <b>$timeHuman</b> by <b>$author</b> to <b>$subreddit</b>"
+    Html.fromHtml(s)
   }
 }
 object Thing {
@@ -76,5 +117,5 @@ object Thing {
       None
 
   implicit def ThingCodecJson: CodecJson[Thing] =
-    casecodec14(Thing.apply, Thing.unapply)("domain", "subreddit", "id", "author", "score", "over_18", "is_self", "permalink", "name", "url", "title", "created_utc", "num_comments", "visited")
+    casecodec16(Thing.apply, Thing.unapply)("domain", "subreddit", "id", "author", "score", "over_18", "downs", "is_self", "permalink", "name", "url", "title", "created_utc", "ups", "num_comments", "visited")
 }

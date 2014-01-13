@@ -47,15 +47,16 @@ case class Subreddit(
 object Subreddit {
 
   private val defaultSubs = List(
-    Subreddit("earthporn"),
+//    Subreddit("earthporn"),
     Subreddit("spaceporn"),
-    Subreddit("aww"),
-    Subreddit("puppies"),
-    Subreddit("cats"),
-    Subreddit("wtf", nsfw = true),
-    Subreddit("gonewild", nsfw = true),
-    Subreddit("nsfw", nsfw = true),
-    Subreddit("ginger", nsfw = true)
+//    Subreddit("aww"),
+//    Subreddit("puppies"),
+//    Subreddit("cats"),
+//    Subreddit("wtf", nsfw = true),
+//    Subreddit("gonewild", nsfw = true),
+//    Subreddit("nsfw", nsfw = true),
+//    Subreddit("ginger", nsfw = true)
+    Subreddit("nsfw_hd", nsfw = true)
   )
 
   def random(implicit db: Db, prefs: Prefs): Future[Subreddit] = future {

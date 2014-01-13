@@ -2,7 +2,10 @@
 <resources>
     <!-- main -->
     <string name="app_name">Reddit Roulette</string>
+
+    <!-- home -->
     <string name="go_btn">Play Reddit Roulette</string>
+    <string name="what_is_this"><u>What is this?</u></string>
 
     <!-- errors / toasts -->
     <string name="image_load_error">Error loading image</string>
@@ -31,4 +34,14 @@
     <string name="pref_selfpost_summary">By default, self posts are filtered out; this will keep them in the mix.</string>
     <string name="pref_swipe_left_title">Swipe Left for Next Post</string>
     <string name="pref_swipe_left_summary">Swiping left on an image will load the next post. This will not work on web content.</string>
+
+    <!-- info dialog -->
+    <string name="dialog_close">Close</string>
+    <string name="dialog_external">Open in Browser</string>
+    <string name="dialog_open_comments">View Comments</string>
+    <string name="dialog_thing_comments">Number of Comments</string>
+    <string name="dialog_thing_score">Score</string>
+
+    <!-- about -->
+    <string name="about_desc">What is this? Reddit Roulette has one purpose: to pick a random image or link off of Reddit and display it. The obvious follow-up question of course is why; so why? Why not.</string>
 </resources>

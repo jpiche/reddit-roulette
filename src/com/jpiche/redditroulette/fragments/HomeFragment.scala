@@ -5,9 +5,10 @@ import android.app.Fragment
 import android.view._
 import android.os.Bundle
 import android.view.View.OnClickListener
-import com.jpiche.redditroulette.{FragTag, BaseFrag, TR, R}
+import com.jpiche.redditroulette._
+import android.util.Log
 
-final case class HomeFragment() extends Fragment with BaseFrag with OnClickListener {
+final case class HomeFragment() extends Fragment with BaseFrag with LogTag with OnClickListener {
 
   // this is a var instead of a case class argument because Android requires
   // a public empty constructor
@@ -28,6 +29,9 @@ final case class HomeFragment() extends Fragment with BaseFrag with OnClickListe
     val goBtn = v.findView(TR.go_btn)
     goBtn setOnClickListener this
 
+    val whatBtn = v.findView(TR.what)
+    whatBtn setOnClickListener this
+
     v
   }
 
@@ -37,6 +41,10 @@ final case class HomeFragment() extends Fragment with BaseFrag with OnClickListe
         val goBtn = v.findView(TR.go_btn)
         goBtn.setVisibility(View.INVISIBLE)
         listener map { _.clickedGo() }
+
+      case TR.what.id =>
+        Log.d(LOG_TAG, "`what is this` clicked")
+        AboutDialogFragment().show(getFragmentManager, AboutDialogFragment.FRAG_TAG)
     }
     return
   }

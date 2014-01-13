@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+        >
+
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="5dp"
+            android:background="@color/dark_gray"
+            android:orientation="vertical"
+            >
+        <TextView
+                android:id="@+id/title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:text="Driverless cars could hurt insurers' bottom lines (60%+ reduction in the cost of auto insurance)"
+                android:textColor="@color/white"
+                />
+
+        <TextView
+                android:id="@+id/post_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="submitted 7 hours ago by mubukugrappa [+1] to science"
+                android:textColor="@color/white"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:layout_marginTop="5dp"
+                />
+    </LinearLayout>
+
+    <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/dialog_thing_score"
+            android:textAllCaps="true"
+            android:paddingLeft="@dimen/dialog_info_item_padding"
+            android:paddingTop="@dimen/dialog_info_item_padding"
+            android:paddingRight="@dimen/dialog_info_item_padding"
+            android:textSize="@dimen/dialog_info_item_title_fontsize"
+            />
+    <TextView
+            android:id="@+id/score"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="2357 (9781 Up, 7424 Down)"
+            android:paddingLeft="@dimen/dialog_info_item_padding"
+            android:paddingBottom="@dimen/dialog_info_item_padding"
+            android:paddingRight="@dimen/dialog_info_item_padding"
+            android:textSize="@dimen/dialog_info_item_fontsize"
+            />
+
+    <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/dialog_border"
+            />
+
+    <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/dialog_thing_comments"
+            android:textAllCaps="true"
+            android:paddingLeft="@dimen/dialog_info_item_padding"
+            android:paddingTop="@dimen/dialog_info_item_padding"
+            android:paddingRight="@dimen/dialog_info_item_padding"
+            android:textSize="@dimen/dialog_info_item_title_fontsize"
+            />
+    <TextView
+            android:id="@+id/comments"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="4327"
+            android:paddingLeft="@dimen/dialog_info_item_padding"
+            android:paddingBottom="@dimen/dialog_info_item_padding"
+            android:paddingRight="@dimen/dialog_info_item_padding"
+            android:textSize="@dimen/dialog_info_item_fontsize"
+            />
+
+    <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/dialog_border"
+            />
+
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/dialog_info_button_height"
+            android:orientation="horizontal"
+            >
+        <Button
+                android:id="@+id/open_comments"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                style="@style/RRDialogButton"
+                android:text="@string/dialog_open_comments"
+                />
+        <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="@color/dialog_border"
+                />
+        <Button
+                android:id="@+id/external"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                style="@style/RRDialogButton"
+                android:text="@string/dialog_external"
+                />
+
+    </LinearLayout>
+
+</LinearLayout>

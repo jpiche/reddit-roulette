@@ -122,6 +122,8 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   override def onNavigateUp(): Boolean = {
     manager.popBackStack()
+    isLoading.set(false)
+    progressHandler.sendEmptyMessage(View.GONE)
     true
   }
 
@@ -150,10 +152,8 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         startActivity(i)
         true
 
-      case R.id.about =>
-        Log.i(LOG_TAG, "about menu item")
-        true
-
+      // TODO: Finish login code so that this can work
+      /*
       case R.id.login =>
         Log.i(LOG_TAG, "login clicked")
         val i = new Intent(this, classOf[LoginActivity])
@@ -163,6 +163,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       case R.id.logout =>
         Log.i(LOG_TAG, "logout clicked")
         true
+      */
 
       case _ => super.onOptionsItemSelected(item)
     }

@@ -16,30 +16,4 @@
           android:title="@string/menu_next"
           android:showAsAction="ifRoom"
             />
-
-    <item android:id="@+id/external"
-          android:title="@string/menu_external"
-          android:showAsAction="never"
-            />
-
-    <item android:id="@+id/login"
-          android:icon="@android:drawable/ic_menu_preferences"
-          android:title="@string/menu_login"
-          android:showAsAction="never"
-            />
-
-    <item android:id="@+id/logout"
-          android:icon="@android:drawable/ic_menu_preferences"
-          android:title="@string/menu_logout"
-          android:showAsAction="never"
-            />
-
-    <item android:id="@+id/settings"
-          android:title="@string/menu_settings"
-          android:showAsAction="never"
-            />
-    <item android:id="@+id/about"
-          android:title="@string/menu_about"
-          android:showAsAction="never"
-            />
 </menu>
