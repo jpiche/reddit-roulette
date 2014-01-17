@@ -34,6 +34,15 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".activities.SubredditListActivity"
+                  android:label="@string/pref_subreddits_title"
+                >
+            <intent-filter>
+                <action android:name="com.jpiche.redditroulette.SubredditList" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <activity android:name=".activities.LoginActivity"
                   android:label="@string/menu_login"
                 >

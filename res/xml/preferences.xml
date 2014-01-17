@@ -25,4 +25,8 @@
             android:defaultValue="false"
             />
 
+    <PreferenceScreen android:title="@string/pref_subreddits_title">
+        <intent android:action="com.jpiche.redditroulette.SubredditList" />
+    </PreferenceScreen>
+
 </PreferenceScreen>

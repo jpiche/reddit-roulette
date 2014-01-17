@@ -3,7 +3,7 @@ package com.jpiche.redditroulette.fragments
 import com.jpiche.redditroulette.TypedResource._
 import android.app.Fragment
 import android.view._
-import android.os.Bundle
+import android.os.{Handler, Bundle}
 import android.view.View.OnClickListener
 import com.jpiche.redditroulette._
 import android.util.Log
@@ -13,6 +13,7 @@ final case class HomeFragment() extends Fragment with BaseFrag with LogTag with 
   // this is a var instead of a case class argument because Android requires
   // a public empty constructor
   var listener: Option[HomeFragment.Listener] = None
+  private val handler = new Handler()
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
@@ -26,8 +27,12 @@ final case class HomeFragment() extends Fragment with BaseFrag with LogTag with 
     val attachToRoot = false
     val v = inflater.inflate(TR.layout.fragment_home, container, attachToRoot)
 
+    val res = getResources
+    val goText = res.getString(R.string.go_btn).format(res.getString(R.string.app_name))
+
     val goBtn = v.findView(TR.go_btn)
     goBtn setOnClickListener this
+    goBtn setText goText
 
     val whatBtn = v.findView(TR.what)
     whatBtn setOnClickListener this
@@ -56,7 +61,12 @@ final case class HomeFragment() extends Fragment with BaseFrag with LogTag with 
 
   def showBtn() {
     val goBtn = getView.findView(TR.go_btn)
-    goBtn.setVisibility(View.VISIBLE)
+    handler.post(new Runnable {
+      def run() {
+        goBtn.setVisibility(View.VISIBLE)
+      }
+    })
+    return
   }
 }
 

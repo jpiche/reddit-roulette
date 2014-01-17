@@ -18,6 +18,7 @@ import com.jpiche.redditroulette._
 import scala.util.{Failure, Success}
 import com.jpiche.redditroulette.net.WebData
 import java.util.concurrent.atomic.AtomicBoolean
+import org.joda.time.DateTime
 
 
 final class MainActivity extends Activity with BaseAct with TypedViewHolder {
@@ -113,9 +114,9 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   override def onAttachFragment(frag: Fragment) {
     frag match {
-      case h@HomeFragment() => h.listener = homeListener
-      case w@WebFragment() => w.listener = webListener
-      case i@ImageFragment() => i.listener = imageListener
+      case h: HomeFragment => h.listener = homeListener
+      case w: WebFragment => w.listener = webListener
+      case i: ImageFragment => i.listener = imageListener
       case _ => return
     }
   }
@@ -133,10 +134,13 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       val tag = manager.getBackStackEntryAt(manager.getBackStackEntryCount - 1).getName
       val f = manager findFragmentByTag tag
 
+      progressHandler.sendEmptyMessage(View.GONE)
+      isLoading.set(false)
+
       if (f == null)
         manager.popBackStack()
       else f match {
-        case web@WebFragment() if web.webView.canGoBack => web.webView.goBack()
+        case web: WebFragment if web.webView.canGoBack => web.webView.goBack()
         case _ => manager.popBackStack()
       }
     } else {
@@ -191,34 +195,52 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
     progressHandler.sendEmptyMessage(View.VISIBLE)
 
-    Subreddit.random map {
-      _.next onComplete {
-        case Success((web: WebData, thing: Thing)) =>
-          runOnUiThread(new Runnable {
-            def run() {
-              val (frag, tag) = if (thing.isImg || web.isImage)
-                (ImageFragment(imageListener, thing), ImageFragment.FRAG_TAG)
-              else
-                (WebFragment(webListener, thing), WebFragment.FRAG_TAG)
-              if (pop) {
-                manager.popBackStack()
-              }
-              addFrag(frag, tag)
+    Subreddit.random onComplete {
+      case Success(sub) =>
+        sub.next onComplete {
+          case Success((web: WebData, thing: Thing)) =>
+            Log.i(LOG_TAG, s"success: ${web.url}; thing: $thing")
+
+            db.findThingVisited(thing.id) match {
+              case Some(time: Long) if DateTime.now.getMillis.toDouble - time < 60 =>
+                Log.w(LOG_TAG, s"skipping! with time $time and diff ${DateTime.now.getMillis.toDouble - time}")
+                next(pop)
+
+              case _ =>
+                db add thing
+
+                val (frag, tag) = if (thing.isImg || web.isImage)
+                  (ImageFragment(imageListener, thing), ImageFragment.FRAG_TAG)
+                else
+                  (WebFragment(webListener, thing), WebFragment.FRAG_TAG)
+
+                runOnUiThread(new Runnable {
+                  def run() {
+                    if (pop) {
+                      manager.popBackStack()
+                    }
+                    addFrag(frag, tag)
+                  }
+                })
             }
-          })
 
-        case Failure(e) =>
-          Log.e(LOG_TAG, "api exception: %s" format e)
-          toast(R.string.api_load_error)
-
-          val home = manager.findFragmentByTag(HomeFragment.FRAG_TAG).asInstanceOf[HomeFragment]
-          if (home != null) {
-            home.showBtn()
-          }
-      }
+          case Failure(e) => nextFail(e)
+        }
+      case Failure(e) => nextFail(e)
     }
 
     return
+  }
+
+  private def nextFail(e: Throwable) {
+    Log.e(LOG_TAG, "api exception: %s" format e)
+    toast(R.string.api_load_error)
+    progressHandler.sendEmptyMessage(View.GONE)
+
+    val home = manager.findFragmentByTag(HomeFragment.FRAG_TAG).asInstanceOf[HomeFragment]
+    if (home != null) {
+      home.showBtn()
+    }
   }
 
   private def addFrag(frag: Fragment, tag: String) {

@@ -15,8 +15,7 @@ sealed trait Base extends LogTag {
 
   protected implicit lazy val db: Db = Db(thisContext)
 
-  // don't be lazy here; the handler needs to be created on the main thread
-  private val toastHandler = new Handler(new Callback {
+  private lazy val toastHandler = new Handler(thisContext.getMainLooper, new Callback {
     def handleMessage(msg: Message): Boolean = {
       if (msg.obj != null && msg.obj.isInstanceOf[String])
           Toast.makeText(thisContext, msg.obj.asInstanceOf[String], Toast.LENGTH_LONG).show()

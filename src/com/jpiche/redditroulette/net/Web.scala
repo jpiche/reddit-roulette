@@ -10,8 +10,14 @@ import scala.annotation.tailrec
 import android.util.Log
 import com.jpiche.redditroulette.LogTag
 
+sealed trait Web {
+  val url: URL
+  def progress(f: (Float) => Unit): Web
+}
 
 object Web extends LogTag {
+
+  private class WebImpl
 
   private final val BUFFER_SIZE = 0x1000
 

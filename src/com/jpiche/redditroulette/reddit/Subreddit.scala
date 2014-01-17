@@ -14,39 +14,21 @@ case class Subreddit(
     name: String,
     nsfw: Boolean = false,
     use: Boolean = true) {
-  private lazy val LOG_TAG = this.getClass.getSimpleName
 
   lazy val url = "http://www.reddit.com/r/%s/" format name
-  lazy val hot = url + "hot.json"
+  lazy val hot = url + "hot.json?limit=100"
 
   def next(implicit webSettings: WebSettings, prefs: Prefs): Future[(WebData, Thing)] =
     Web.get(hot) collect {
-      case web@WebData(_, _) =>
-        web.asString.decodeOption[Listing] match {
-          case Some(listing: Listing) if listing.hasChildren => {
-            val children = if (prefs.showSelf)
-              listing.children
-            else
-              listing.children filterNot { _.data.isSelf }
+      case web: WebData => Subreddit.randomThing(web)
 
-            val t = {
-              // TODO: Save off selected thing and don't grab it again for a bit.
-              val i = Random.nextInt(children.length)
-              children(i).data
-            }
-
-            Log.d(LOG_TAG, "collecting thing with url: %s" format t.url)
-            (web, t)
-          }
-          case None => throw new Exception
-        }
-      case fail@WebFail(_) => throw new Exception(fail.errorMessage)
+      case fail: WebFail => throw new Exception(fail.errorMessage)
     }
 }
 
-object Subreddit {
+object Subreddit extends LogTag {
 
-  private val defaultSubs = List(
+  val defaultSubs = List(
     Subreddit("earthporn"),
     Subreddit("spaceporn"),
     Subreddit("aww"),
@@ -61,12 +43,31 @@ object Subreddit {
   )
 
   def random(implicit db: Db, prefs: Prefs): Future[Subreddit] = future {
-    if (db.countSubs == 0) {
-      db add defaultSubs
-    }
     val subs = db allSubs prefs.allowNsfw
+    Log.i(LOG_TAG, s"subs from db: $subs")
 
     val i = Random.nextInt(subs.size)
-    subs(i)
+    val s = subs(i)
+    Log.i(LOG_TAG, s"picked sub: $s")
+    s
   }
+
+  def randomThing(web: WebData)(implicit prefs: Prefs): (WebData, Thing) =
+    web.asString.decodeOption[Listing] match {
+      case Some(listing: Listing) if listing.hasChildren =>
+        val children = if (prefs.showSelf)
+          listing.children
+        else
+          listing.children filterNot { _.data.isSelf }
+
+        val t = {
+          val i = Random.nextInt(children.length)
+          children(i).data
+        }
+
+        Log.d(LOG_TAG, "collecting thing with url: %s" format t.url)
+        (web, t)
+
+      case _ => throw new Exception
+    }
 }
