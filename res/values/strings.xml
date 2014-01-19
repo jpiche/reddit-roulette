@@ -6,6 +6,7 @@
     <!-- home -->
     <string name="go_btn">Play Reddit Roulette</string>
     <string name="what_is_this"><u>What is this?</u></string>
+    <string name="loading">Loading&#8230;</string>
 
     <!-- errors / toasts -->
     <string name="image_load_error">Error loading image</string>
@@ -52,5 +53,9 @@
     <string name="sub_add">Add Subreddit</string>
     <string name="sub_confirm_delete">Are you sure you would like to remove subreddit <b>%s</b>?</string>
     <string name="sub_confirm_delete_btn">Confirm Remove</string>
+
+    <string name="sub_add_title">Add Subreddit</string>
+    <string name="sub_add_subtitle">Subreddit name</string>
+    <string name="sub_add_btn">Add Subreddit</string>
 
 </resources>

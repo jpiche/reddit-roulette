@@ -1,7 +1,6 @@
 package com.jpiche.redditroulette
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scalaz._, Scalaz._
 
 import android.database.sqlite.{SQLiteDatabase, SQLiteOpenHelper}
 import android.content.{ContentValues, Context}
@@ -60,7 +59,7 @@ sealed trait Db extends SQLiteOpenHelper {
     val sql = s"${Db.things.SELECT} WHERE ${Db.things.KEY_ID} = ?"
     val cursor = db.rawQuery(sql, Array(id))
     val count = if (cursor.moveToFirst()) {
-      cursor.getLong(0).some
+      Some(cursor.getLong(0))
     } else {
       None
     }
@@ -82,7 +81,6 @@ sealed trait Db extends SQLiteOpenHelper {
         val values = new ContentValues()
         values.put(Db.subreddit.KEY_NAME, sub.name)
         values.put(Db.subreddit.KEY_NSFW, sub.nsfw)
-        values.put(Db.subreddit.KEY_USE, sub.use)
 
         db.insert(Db.subreddit.TABLE, null, values)
       }
@@ -103,8 +101,7 @@ sealed trait Db extends SQLiteOpenHelper {
       } yield {
         val s = Subreddit(
           name = cursor.getString(2),
-          use = cursor.getInt(3) > 0,
-          nsfw = cursor.getInt(4) > 0
+          nsfw = cursor.getInt(3) > 0
         )
         cursor.moveToNext()
         s
@@ -113,6 +110,29 @@ sealed trait Db extends SQLiteOpenHelper {
 
     cursor.close()
     subs
+  }
+
+  def nextSub(nsfw: Boolean, lastOpt: Option[String]): Future[Option[Subreddit]] = future {
+    read { db =>
+      val select = if (nsfw) Db.subreddit.SELECT else Db.subreddit.SELECT_SFW
+      val (sql, args: Array[String]) = lastOpt match {
+        case Some(last) =>
+          (s"$select WHERE ${Db.subreddit.KEY_NAME} != ? ORDER BY RANDOM() LIMIT 1", Array(last))
+        case _ =>
+          (s"$select ORDER BY RANDOM() LIMIT 1", Array.empty[String])
+      }
+      val cursor = db.rawQuery(sql, args)
+      if (cursor.moveToFirst()) {
+        val s = Subreddit(
+          name = cursor.getString(2),
+          nsfw = cursor.getInt(3) > 0
+        )
+        cursor.close()
+        Some(s)
+      } else {
+        None
+      }
+    }
   }
 
   def countSubs: Int = read { db =>
@@ -126,9 +146,10 @@ sealed trait Db extends SQLiteOpenHelper {
     count
   }
 
-  def listSubs: Future[Cursor] = future {
+  def listSubs: Cursor = {
     val db = getReadableDatabase
-    db.rawQuery(Db.subreddit.SELECT, null)
+    val sql = s"${Db.subreddit.SELECT} ORDER BY ${Db.subreddit.KEY_NAME}"
+    db.rawQuery(sql, null)
   }
 
   def findSub(id: Long): Option[Subreddit] = read { db =>
@@ -138,11 +159,10 @@ sealed trait Db extends SQLiteOpenHelper {
     if (cursor.moveToFirst()) {
       val s = Subreddit(
         name = cursor.getString(2),
-        use = cursor.getInt(3) > 0,
-        nsfw = cursor.getInt(4) > 0
+        nsfw = cursor.getInt(3) > 0
       )
       cursor.close()
-      s.some
+      Some(s)
     } else {
       None
     }
@@ -165,18 +185,16 @@ object Db extends DbTypes {
     val KEY_PK = "_id"
     val KEY_ID = "id"
     val KEY_NAME = "name"
-    val KEY_USE = "use"
     val KEY_NSFW = "nsfw"
 
     private val COLS = Map(
       KEY_PK -> TYPE_PK,
       KEY_ID -> TYPE_TEXT,
       KEY_NAME -> TYPE_TEXT,
-      KEY_USE -> TYPE_INT,
       KEY_NSFW -> TYPE_INT
     )
 
-    val SELECT = s"SELECT $KEY_PK, $KEY_ID, $KEY_NAME, $KEY_USE, $KEY_NSFW FROM $TABLE"
+    val SELECT = s"SELECT $KEY_PK, $KEY_ID, $KEY_NAME, $KEY_NSFW FROM $TABLE"
     val SELECT_SFW = s"$SELECT WHERE $KEY_NSFW = 0"
     val COUNT = s"SELECT COUNT($KEY_PK) FROM $TABLE LIMIT 1"
     val CREATE = s"CREATE TABLE $TABLE (${colsToString(COLS)})"

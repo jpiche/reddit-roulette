@@ -2,7 +2,7 @@ package com.jpiche.redditroulette.activities
 
 import android.os.Bundle
 import com.jpiche.redditroulette.fragments.SettingsFragment
-import android.app.Activity
+import android.app.{Fragment, Activity}
 import com.jpiche.redditroulette.BaseAct
 
 final class SettingsActivity extends Activity with BaseAct {

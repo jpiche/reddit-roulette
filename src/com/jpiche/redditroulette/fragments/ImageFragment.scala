@@ -1,14 +1,12 @@
 package com.jpiche.redditroulette.fragments
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import com.jpiche.redditroulette.TypedResource._
 import android.view.{LayoutInflater, ViewGroup, View}
-import android.os.{Bundle, Handler}
+import android.os.Bundle
 import android.util.Log
 import com.jpiche.redditroulette._
 import com.jpiche.redditroulette.reddit.Thing
-import com.jpiche.redditroulette.net.{WebFail, WebData, Web}
-import scala.util.{Failure, Success}
+import com.jpiche.redditroulette.net.{WebBitmapData, WebData, WebBitmap}
 
 
 final case class ImageFragment() extends ThingFragment {
@@ -24,10 +22,24 @@ final case class ImageFragment() extends ThingFragment {
     }
   }
 
+  private var webData: Option[WebBitmap] = None
+
+  override def onCreate(inst: Bundle) {
+    super.onCreate(inst)
+
+    val args = getArguments
+    if (args != null && args.containsKey(ImageFragment.KEY_DATA)) {
+      val d = args.getByteArray(ImageFragment.KEY_DATA)
+      webData = Some(WebBitmapData(d))
+    }
+  }
+
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
-    if (thing.isEmpty) {
+    Log.d(LOG_TAG, s"onCreateView with thing $thing")
+
+    if (thing.isEmpty || webData.isEmpty) {
       listener map { _.onError(thing) }
       return null
     }
@@ -36,31 +48,12 @@ final case class ImageFragment() extends ThingFragment {
     val v = inflater.inflate(TR.layout.fragment_image, container, attachToRoot)
     val img = v.findView(TR.imageView)
 
-    val handler = new Handler()
+    webData.get.toBitmap match {
+      case Some(bmp) =>
+        img setImageBitmap bmp
+        listener map { _.onFinished() }
 
-    Web.get(thing.get.goodUrl) onComplete {
-      case Success(web: WebData) =>
-        try {
-          val bmp = web.toBitmap
-          handler.post(new Runnable {
-            def run() {
-              img.setImageBitmap(bmp)
-            }
-          })
-          listener map { _.onFinished() }
-
-        } catch {
-          case e: OutOfMemoryError =>
-            Log.e(LOG_TAG, s"OutOfMemoryError with url (${thing.get.goodUrl}: $e")
-            listener map { _.onError(thing) }
-        }
-
-      case Success(fail: WebFail) =>
-        Log.e(LOG_TAG, fail.errorMessage)
-        listener map { _.onError(thing) }
-
-      case Failure(e) =>
-        Log.e(LOG_TAG, s"api exception loading url (${thing.get.goodUrl}: $e")
+      case None =>
         listener map { _.onError(thing) }
     }
 
@@ -81,11 +74,16 @@ final case class ImageFragment() extends ThingFragment {
 }
 
 object ImageFragment extends FragTag {
+  private final val KEY_DATA = "__DATA"
 
-  def apply(listener: Option[ThingListener], thing: Thing): ImageFragment = {
+  def apply(listener: ThingListener, thing: Thing, web: WebData): ImageFragment = {
     val frag = new ImageFragment()
-    frag.listener = listener
-    frag.setArguments(thing.toBundle)
+    frag.listener = Some(listener)
+
+    val b = thing.toBundle
+    b.putByteArray(KEY_DATA, web.data)
+
+    frag.setArguments(b)
     frag
   }
 }

@@ -59,9 +59,9 @@ final case class WebFragment() extends ThingFragment {
 object WebFragment extends FragTag {
   private val URL_KEY = "URL_KEY"
 
-  def apply(listener: Option[ThingListener], thing: Thing): WebFragment = {
+  def apply(listener: ThingListener, thing: Thing): WebFragment = {
     val frag = new WebFragment()
-    frag.listener = listener
+    frag.listener = Some(listener)
     frag.setArguments(thing.toBundle)
     frag
   }

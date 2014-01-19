@@ -1,6 +1,5 @@
 package com.jpiche.redditroulette.reddit
 
-import scalaz._, Scalaz._
 import argonaut._, Argonaut._
 import android.os.Bundle
 import android.text.{Html, Spanned}

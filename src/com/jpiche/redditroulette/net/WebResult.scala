@@ -2,11 +2,8 @@ package com.jpiche.redditroulette.net
 
 import java.net.HttpURLConnection
 import scalaz._, Scalaz._
-import android.graphics.{Bitmap, BitmapFactory}
 import com.jpiche.redditroulette.LogTag
-import android.util.Log
-import android.opengl.GLES20
-
+import android.graphics.Bitmap
 
 sealed trait WebResult extends ContentTypeParser {
   val conn: HttpURLConnection
@@ -36,5 +33,5 @@ case class WebFail(conn: HttpURLConnection) extends WebResult {
 
 case class WebData(conn: HttpURLConnection, data: Array[Byte]) extends WebResult with WebBitmap with LogTag {
   lazy val asString = new String(data, charset | "UTF-8")
-  lazy val toBitmap: Bitmap = toBitmap(data)
+  lazy val toBitmap: Option[Bitmap] = toBitmap(data)
 }

@@ -1,7 +1,6 @@
 package com.jpiche.redditroulette.reddit
 
 import argonaut._, Argonaut._
-import scala.util.Random
 
 case class Listing(
   kind: String,

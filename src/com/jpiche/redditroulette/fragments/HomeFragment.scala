@@ -43,8 +43,6 @@ final case class HomeFragment() extends Fragment with BaseFrag with LogTag with 
   override def onClick(v: View) {
     v.getId match {
       case TR.go_btn.id =>
-        val goBtn = v.findView(TR.go_btn)
-        goBtn.setVisibility(View.INVISIBLE)
         listener map { _.clickedGo() }
 
       case TR.what.id =>

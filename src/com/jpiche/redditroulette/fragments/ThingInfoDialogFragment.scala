@@ -1,11 +1,9 @@
 package com.jpiche.redditroulette.fragments
 
-import scalaz._, Scalaz._
 import android.app.DialogFragment
 import com.jpiche.redditroulette.{TR, R, FragTag, BaseFrag}
 import android.os.Bundle
 import com.jpiche.redditroulette.reddit.Thing
-import android.util.Log
 import android.content.Intent
 import android.net.Uri
 import android.view._

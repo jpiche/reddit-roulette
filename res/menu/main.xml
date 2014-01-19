@@ -5,10 +5,22 @@
       tools:context=".activities.MainActivity"
         >
 
-<item android:id="@+id/settings"
-      android:icon="@android:drawable/ic_menu_preferences"
-      android:title="@string/menu_settings"
-      android:showAsAction="ifRoom"
-        />
+    <item android:id="@+id/settings"
+          android:icon="@android:drawable/ic_menu_preferences"
+          android:title="@string/menu_settings"
+          android:showAsAction="ifRoom"
+            />
+
+    <item android:id="@+id/login"
+          android:title="@string/menu_login"
+          android:showAsAction="never"
+          android:visible="false"
+          />
+
+    <item android:id="@+id/logout"
+          android:title="@string/menu_logout"
+          android:showAsAction="never"
+          android:visible="false"
+          />
 
 </menu>

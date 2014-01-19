@@ -4,29 +4,46 @@ import scalaz._, Scalaz._
 import scalaz.std.boolean.unless
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.mutable
+import scala.util.{Failure, Success}
+import scala.concurrent.{Future, promise}
+
+import java.util.concurrent.atomic.AtomicBoolean
+
 import android.os.{Message, Handler, Bundle}
 import android.util.Log
 import android.app.{Activity, Fragment}
-import com.jpiche.redditroulette.reddit.{Thing, Subreddit}
 import android.view.{WindowManager, MenuItem, View}
-import com.jpiche.redditroulette.fragments._
 import android.app.FragmentManager.OnBackStackChangedListener
-import com.testflightapp.lib.TestFlight
 import android.content.{Context, Intent}
 import android.net.ConnectivityManager
+
+import com.jpiche.redditroulette.reddit.Thing
+import com.jpiche.redditroulette.fragments._
 import com.jpiche.redditroulette._
-import scala.util.{Failure, Success}
-import com.jpiche.redditroulette.net.WebData
-import java.util.concurrent.atomic.AtomicBoolean
+import com.jpiche.redditroulette.net.{Web, WebFail, WebData}
+
 import org.joda.time.DateTime
 
 
 final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
+  private sealed trait ThingData {
+    val webData: WebData
+    val thing: Thing
+  }
+  private final case class ThingWebData(webData: WebData, thing: Thing) extends ThingData
+  private final case class ThingBitmapData(webData: WebData, thing: Thing) extends ThingData
+
+
   private lazy val progressLayout = findView(TR.progressLayout)
   private lazy val progress = findView(TR.progress)
 
+  private var lastSub: Option[String] = None
+
   private val isLoading = new AtomicBoolean(false)
+  private val thingQueue = new mutable.SynchronizedQueue[Future[ThingData]]
+  private val handler = new Handler()
 
   private val progressHandler = new Handler(new Handler.Callback {
     def handleMessage(msg: Message): Boolean = {
@@ -42,7 +59,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     override def clickedGo() {
       next(pop = false)
     }
-  }.some
+  }
 
   private val backStackListener = new OnBackStackChangedListener {
     def onBackStackChanged() = shouldActionUp()
@@ -80,14 +97,14 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
           toast(R.string.url_load_error)
       }
     }
-  }.some
+  }
 
   private val webListener = new AbstractThingListener {
     def onError(thing: Option[Thing]) {
       manager.popBackStack()
       toast(R.string.url_load_error)
     }
-  }.some
+  }
 
 
   override def onCreate(savedInstanceState: Bundle) {
@@ -96,7 +113,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     setContentView(R.layout.main)
 
     if (savedInstanceState == null) {
-      val homeFrag = HomeFragment(homeListener)
+      val homeFrag = HomeFragment(homeListener.some)
       val t = manager.beginTransaction()
       t.add(R.id.container, homeFrag, HomeFragment.FRAG_TAG)
       t.commit()
@@ -108,15 +125,17 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
     progress.setMax(100)
 
+    thingQueue += nextThing
+
     manager addOnBackStackChangedListener backStackListener
     shouldActionUp()
   }
 
   override def onAttachFragment(frag: Fragment) {
     frag match {
-      case h: HomeFragment => h.listener = homeListener
-      case w: WebFragment => w.listener = webListener
-      case i: ImageFragment => i.listener = imageListener
+      case h: HomeFragment => h.listener = homeListener.some
+      case w: WebFragment => w.listener = webListener.some
+      case i: ImageFragment => i.listener = imageListener.some
       case _ => return
     }
   }
@@ -157,7 +176,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         true
 
       // TODO: Finish login code so that this can work
-      /*
       case R.id.login =>
         Log.i(LOG_TAG, "login clicked")
         val i = new Intent(this, classOf[LoginActivity])
@@ -167,7 +185,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       case R.id.logout =>
         Log.i(LOG_TAG, "logout clicked")
         true
-      */
 
       case _ => super.onOptionsItemSelected(item)
     }
@@ -176,10 +193,87 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     getActionBar.setDisplayHomeAsUpEnabled(manager.getBackStackEntryCount > 0)
   }
 
-  // make it a lazy val so that it only gets sent once per instance
-  private lazy val checkpoint =
-    TestFlight.passCheckpoint(RouletteApp.CHECKPOINT_PLAY)
+  /**
+   * This is an aggregate function for subreddit and "thing" finding which
+   * returns a composite `Future[ThingData]` at the end of the chain, which
+   * is a simple sealed collection of case classes for `(WebData, Thing)`.
+   */
+  private def nextThing: Future[ThingData] = {
+    val p = promise[ThingData]()
 
+    db.nextSub(prefs.allowNsfw, lastSub) onComplete {
+      case Success(Some(sub)) =>
+        sub.next onComplete {
+          case Success((web: WebData, thing: Thing)) =>
+            if (needsSkip(thing)) {
+              p completeWith nextThing
+            } else {
+              val fallback = ThingWebData(web, thing)
+              if (thing.isImg || web.isImage) {
+                Web.get(thing.goodUrl) onComplete {
+                  case Success(webBmp: WebData) =>
+                    p success ThingBitmapData(webBmp, thing)
+
+                  case Success(fail: WebFail) =>
+                    p success fallback
+
+                  case Failure(e) =>
+                    Log.e(LOG_TAG, s"api exception loading url (${thing.goodUrl}: $e")
+                    p success fallback
+                }
+              } else {
+                p success fallback
+              }
+              lastSub = sub.name.some
+            }
+
+          case Failure(e) =>
+            Log.e(LOG_TAG, s"api exception: $e")
+            p failure e
+        }
+      case Success(None) =>
+        Log.e(LOG_TAG, s"Failed to find the next subreddit?")
+        p completeWith nextThing
+
+      case Failure(e) =>
+        Log.e(LOG_TAG, s"Failed to load next subreddit. Error: $e")
+        p failure e
+    }
+    p.future
+  }
+
+  /**
+   * Function for checking the database for whether the thing passed in needs
+   * to be skipped or not.
+   *
+   * @param thing The thing to check whether we need to skip it and load a
+   *              new one.
+   * @return      `true` indicates that the thing needs to be skipped.
+   */
+  private def needsSkip(thing: Thing): Boolean = {
+    try {
+      db.findThingVisited(thing.id) match {
+        case Some(time: Long) if DateTime.now.getMillis.toDouble - time < 60 =>
+          Log.w(LOG_TAG, s"skipping! with time $time and diff ${DateTime.now.getMillis.toDouble - time}")
+          true
+        case _ =>
+          db add thing
+          false
+      }
+    } catch {
+      case e: IllegalStateException =>
+        Log.w(LOG_TAG, s"IllegalStateException when calling findThingVisited: $e")
+        false
+    }
+  }
+
+  /**
+   * This function takes the `thingQueue` and actually assigns the things to
+   * fragments.
+   *
+   * @param pop Whether to pop the previous fragment from the backstack; `true`
+   *            to pop it, `false` to leave it.
+   */
   private def next(pop: Boolean) {
     if (isLoading.get()) {
       Log.i(LOG_TAG, "Ran next() while post was still loading")
@@ -191,56 +285,42 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       toast(R.string.no_internet)
       return
     }
-    checkpoint
 
     progressHandler.sendEmptyMessage(View.VISIBLE)
+    val f = if (thingQueue.size > 0)
+      thingQueue.dequeue()
+    else
+      nextThing
 
-    Subreddit.random onComplete {
-      case Success(sub) =>
-        sub.next onComplete {
-          case Success((web: WebData, thing: Thing)) =>
-            Log.i(LOG_TAG, s"success: ${web.url}; thing: $thing")
+    thingQueue += nextThing
 
-            db.findThingVisited(thing.id) match {
-              case Some(time: Long) if DateTime.now.getMillis.toDouble - time < 60 =>
-                Log.w(LOG_TAG, s"skipping! with time $time and diff ${DateTime.now.getMillis.toDouble - time}")
-                next(pop)
-
-              case _ =>
-                db add thing
-
-                val (frag, tag) = if (thing.isImg || web.isImage)
-                  (ImageFragment(imageListener, thing), ImageFragment.FRAG_TAG)
-                else
-                  (WebFragment(webListener, thing), WebFragment.FRAG_TAG)
-
-                runOnUiThread(new Runnable {
-                  def run() {
-                    if (pop) {
-                      manager.popBackStack()
-                    }
-                    addFrag(frag, tag)
-                  }
-                })
-            }
-
-          case Failure(e) => nextFail(e)
+    def add(frag: Fragment, tag: String) =
+      handler.post(new Runnable {
+        override def run() {
+          if (pop) {
+            manager.popBackStack()
+          }
+          addFrag(frag, tag)
         }
-      case Failure(e) => nextFail(e)
+      })
+
+    f onComplete {
+      case Success(ThingBitmapData(webData: WebData, thing: Thing)) =>
+        Log.i(LOG_TAG, s"Success with ThingWebData: $thing")
+        val f = ImageFragment(imageListener, thing, webData)
+        add(f, ImageFragment.FRAG_TAG)
+
+      case Success(ThingWebData(webData: WebData, thing: Thing)) =>
+        Log.i(LOG_TAG, s"Success with ThingBitmapData: $thing")
+        val f = WebFragment(webListener, thing)
+        add(f, WebFragment.FRAG_TAG)
+
+      case Failure(e) =>
+        Log.i(LOG_TAG, s"Failure in next(): $e")
+        progressHandler.sendEmptyMessage(View.GONE)
     }
 
     return
-  }
-
-  private def nextFail(e: Throwable) {
-    Log.e(LOG_TAG, "api exception: %s" format e)
-    toast(R.string.api_load_error)
-    progressHandler.sendEmptyMessage(View.GONE)
-
-    val home = manager.findFragmentByTag(HomeFragment.FRAG_TAG).asInstanceOf[HomeFragment]
-    if (home != null) {
-      home.showBtn()
-    }
   }
 
   private def addFrag(frag: Fragment, tag: String) {

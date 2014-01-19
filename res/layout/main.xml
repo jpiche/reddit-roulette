@@ -14,21 +14,6 @@
             android:layout_height="match_parent"
             />
 
-    <RelativeLayout
-            android:id="@+id/progressLayout"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/progress_bg"
-            android:visibility="gone"
-            >
-        <ProgressBar
-                android:id="@+id/progress"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerInParent="true"
-                style="@android:style/Widget.ProgressBar.Large"
-
-                />
-    </RelativeLayout>
+    <include layout="@layout/partial_progress" />
 
 </FrameLayout>
