@@ -1,9 +1,14 @@
 package com.jpiche.redditroulette.fragments
 
-import com.jpiche.redditroulette.TypedResource._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.future
+import scala.util.Success
+
 import android.view.{LayoutInflater, ViewGroup, View}
-import android.os.Bundle
+import android.os.{Handler, Bundle}
 import android.util.Log
+
+import com.jpiche.redditroulette.TypedResource._
 import com.jpiche.redditroulette._
 import com.jpiche.redditroulette.reddit.Thing
 import com.jpiche.redditroulette.net.{WebBitmapData, WebData, WebBitmap}
@@ -49,12 +54,29 @@ final case class ImageFragment() extends ThingFragment {
     val v = inflater.inflate(TR.layout.fragment_image, container, attachToRoot)
     val img = v.findView(TR.imageView)
 
-    webData.get.toBitmap match {
-      case Some(bmp) =>
-        img setImageBitmap bmp
-        listener map { _.onFinished() }
+    val handler = new Handler()
 
-      case None =>
+    future {
+      try {
+        webData.get.toBitmap
+
+      } catch {
+        case oom: OutOfMemoryError =>
+          Log.w(LOG_TAG, s"OutOfMemoryError with thing $thing")
+          listener map { _.onError(thing) }
+          None
+      }
+    } onComplete {
+      case Success(Some(bmp)) =>
+        handler.post(new Runnable {
+          def run() {
+            img setImageBitmap bmp
+            listener map { _.onFinished() }
+            return
+          }
+        })
+
+      case _ =>
         listener map { _.onError(thing) }
     }
 

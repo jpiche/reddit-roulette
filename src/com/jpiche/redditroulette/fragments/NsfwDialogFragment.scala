@@ -4,9 +4,12 @@ import android.app.{Dialog, AlertDialog, DialogFragment}
 import android.os.Bundle
 import com.jpiche.redditroulette._
 import android.content.DialogInterface
+import android.content.DialogInterface.OnDismissListener
 
 
 final class NsfwDialogFragment extends DialogFragment with BaseFrag {
+
+  var listener: Option[NsfwDialogListener] = None
 
   override def onCreateDialog(inst: Bundle): Dialog = {
     val builder = new AlertDialog.Builder(getActivity)
@@ -18,6 +21,8 @@ final class NsfwDialogFragment extends DialogFragment with BaseFrag {
         if ( ! b) {
           toast(R.string.pref_write_error)
         }
+        listener map { _.onDismiss() }
+        return
       }
     })
     builder.setNegativeButton(R.string.pref_over19_no, new DialogInterface.OnClickListener {
@@ -26,12 +31,23 @@ final class NsfwDialogFragment extends DialogFragment with BaseFrag {
         if ( ! b) {
           toast(R.string.pref_write_error)
         }
+        listener map { _.onDismiss() }
+        return
       }
     })
+    builder.setCancelable(false)
     builder.create()
   }
 }
 
 object NsfwDialogFragment extends FragTag {
-  def apply() = new NsfwDialogFragment
+  def apply(listener: NsfwDialogListener) = {
+    val frag = new NsfwDialogFragment
+    frag.listener = Some(listener)
+    frag
+  }
+}
+
+trait NsfwDialogListener {
+  def onDismiss(): Unit
 }

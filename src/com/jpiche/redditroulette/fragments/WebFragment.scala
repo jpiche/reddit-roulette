@@ -49,8 +49,10 @@ final case class WebFragment() extends ThingFragment {
 
   override def onSaveInstanceState(outState: Bundle) {
     super.onSaveInstanceState(outState)
-    val web = getView.findView(TR.web)
-    outState.putString(WebFragment.URL_KEY, web.getUrl)
+    if (getView != null) {
+      val web = getView.findView(TR.web)
+      outState.putString(WebFragment.URL_KEY, web.getUrl)
+    }
   }
 
   def webView = getView.findView(TR.web)

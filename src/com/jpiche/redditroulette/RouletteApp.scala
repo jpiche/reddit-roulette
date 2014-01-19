@@ -2,13 +2,21 @@ package com.jpiche.redditroulette
 
 import android.app.Application
 import com.testflightapp.lib.TestFlight
+import android.util.Log
 
-final class RouletteApp extends Application {
+final class RouletteApp extends Application with LogTag {
 
   override def onCreate() {
     super.onCreate()
 
     TestFlight.takeOff(this, RouletteApp.TESTFLIGHT_KEY)
+  }
+
+  override def onLowMemory() {
+    super.onLowMemory()
+
+    Log.w(LOG_TAG, "onLowMemory!")
+    return
   }
 }
 

@@ -55,16 +55,43 @@ sealed trait Db extends SQLiteOpenHelper {
     return
   }
 
-  def findThingVisited(id: String) = read { db =>
-    val sql = s"${Db.things.SELECT} WHERE ${Db.things.KEY_ID} = ?"
+  def shouldSkipThing(id: String, minDiff: Long): Boolean = read { db =>
+    val sql = s"""
+      SELECT ${Db.things.KEY_PK}
+      FROM ${Db.things.TABLE}
+      WHERE ${Db.things.KEY_ID} = ?
+      ORDER BY ${Db.things.KEY_PK} DESC
+      """
     val cursor = db.rawQuery(sql, Array(id))
-    val count = if (cursor.moveToFirst()) {
-      Some(cursor.getLong(0))
+    val should = if (cursor.moveToFirst()) {
+      val lastPk = cursor.getLong(0)
+      val maxPk = findMaxThingPk()
+      if (maxPk < 0)
+        false
+      else
+        maxPk - lastPk < minDiff
     } else {
-      None
+      false
     }
     cursor.close()
-    count
+    should
+  }
+
+  def findMaxThingPk(): Long = read { db =>
+    val sql = s"""
+      SELECT ${Db.things.KEY_PK}
+      FROM ${Db.things.TABLE}
+      WHERE ${Db.things.KEY_ID} = ?
+      ORDER BY ${Db.things.KEY_PK} DESC
+      """
+    val cursor = db.rawQuery(sql, Array())
+
+    val pk = if (cursor.moveToFirst())
+      cursor.getLong(0)
+    else
+      -1
+    cursor.close()
+    pk
   }
 
   def add(sub: Subreddit): Future[Unit] =
@@ -116,9 +143,9 @@ sealed trait Db extends SQLiteOpenHelper {
     read { db =>
       val (sql, args: Array[String]) = lastOpt match {
         case Some(last) if nsfw =>
-          (s"${Db.subreddit.SELECT} WHERE ${Db.subreddit.KEY_NAME} != ? ORDER BY RANDOM() LIMIT 1", Array(last))
+          (s"${Db.subreddit.SELECT} WHERE 1 ORDER BY RANDOM() LIMIT 1", Array.empty[String])
         case Some(last) =>
-          (s"${Db.subreddit.SELECT_SFW} AND ${Db.subreddit.KEY_NAME} != ? ORDER BY RANDOM() LIMIT 1", Array(last))
+          (s"${Db.subreddit.SELECT_SFW} ORDER BY RANDOM() LIMIT 1", Array.empty[String])
         case _ =>
           (s"${Db.subreddit.SELECT} ORDER BY RANDOM() LIMIT 1", Array.empty[String])
       }
@@ -149,8 +176,8 @@ sealed trait Db extends SQLiteOpenHelper {
 
   def listSubs: Cursor = {
     val db = getReadableDatabase
-    val sql = s" ORDER BY ${Db.subreddit.KEY_NAME}"
-    db.rawQuery(Db.subreddit.SELECT, null)
+    val sql = s"${Db.subreddit.SELECT} ORDER BY ${Db.subreddit.KEY_NAME}"
+    db.rawQuery(sql, null)
   }
 
   def findSub(id: Long): Option[Subreddit] = read { db =>

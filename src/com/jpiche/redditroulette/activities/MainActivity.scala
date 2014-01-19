@@ -4,9 +4,9 @@ import scalaz._, Scalaz._
 import scalaz.std.boolean.unless
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.collection.mutable
+import scala.concurrent.{Await, Future, promise}
 import scala.util.{Failure, Success}
-import scala.concurrent.{Future, promise}
+import scala.collection.mutable
 
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -23,8 +23,6 @@ import com.jpiche.redditroulette.fragments._
 import com.jpiche.redditroulette._
 import com.jpiche.redditroulette.net.{Web, WebFail, WebData}
 
-import org.joda.time.DateTime
-
 
 final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
@@ -40,6 +38,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private lazy val progress = findView(TR.progress)
 
   private var lastSub: Option[String] = None
+  private var allowNsfwPref = false
 
   private val isLoading = new AtomicBoolean(false)
   private val thingQueue = new mutable.SynchronizedQueue[Future[ThingData]]
@@ -58,6 +57,13 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private val homeListener = new HomeFragment.Listener {
     override def clickedGo() {
       next()
+    }
+  }
+
+  private val nsfwListener = new NsfwDialogListener {
+    override def onDismiss() {
+      thingQueue += nextThing
+      return
     }
   }
 
@@ -116,23 +122,48 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     getWindow.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
     setContentView(R.layout.main)
 
-    if (savedInstanceState == null) {
+    val start = if (savedInstanceState == null) {
       val homeFrag = HomeFragment(homeListener.some)
       val t = manager.beginTransaction()
       t.add(R.id.container, homeFrag, HomeFragment.FRAG_TAG)
       t.commit()
 
-      unless (prefs contains Prefs.PREF_NSFW) {
-        NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
+      if (prefs contains Prefs.PREF_NSFW) {
+        true
+      } else {
+        NsfwDialogFragment(nsfwListener).show(manager, NsfwDialogFragment.FRAG_TAG)
+        false
       }
+    } else {
+      true
     }
 
     progress.setMax(100)
+    allowNsfwPref = prefs.allowNsfw
 
-    thingQueue += nextThing
+    if (start) {
+      // On first launch, the NSFW dialog will show, in which case, we don't
+      // want to start pre-fetching until a NSFW pref is chosen.
+      thingQueue += nextThing
+    }
 
     manager addOnBackStackChangedListener backStackListener
     shouldActionUp()
+  }
+
+  override def onResume() {
+    super.onResume()
+
+    val newNsfw = prefs.allowNsfw
+    if (newNsfw != allowNsfwPref) {
+      allowNsfwPref = newNsfw
+
+      // TODO: kill the threads first
+      thingQueue.clear()
+
+      thingQueue += nextThing
+    }
+    return
   }
 
   override def onAttachFragment(frag: Fragment) {
@@ -209,8 +240,17 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       case Success(Some(sub)) =>
         sub.next onComplete {
           case Success((web: WebData, thing: Thing)) =>
-            if (needsSkip(thing)) {
+
+            // if the post is marked nsfw even though the subreddit is not,
+            // and the user has nsfw off, skip it
+            if (thing.over18 && ! prefs.allowNsfw) {
               p completeWith nextThing
+
+            // look at the db for distance between this and that last time it was shown
+            } else if (needsSkip(thing)) {
+              p completeWith nextThing
+
+            // else, it should be safe
             } else {
               val fallback = ThingWebData(web, thing)
               if (thing.isImg || web.isImage) {
@@ -256,13 +296,13 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
    */
   private def needsSkip(thing: Thing): Boolean = {
     try {
-      db.findThingVisited(thing.id) match {
-        case Some(time: Long) if DateTime.now.getMillis.toDouble - time < 60 =>
-          Log.w(LOG_TAG, s"skipping! with time $time and diff ${DateTime.now.getMillis.toDouble - time}")
-          true
-        case _ =>
-          db add thing
-          false
+      if (db.shouldSkipThing(thing.id, 30)) {
+        Log.w(LOG_TAG, s"skipping!! thing: $thing")
+        true
+      } else {
+        Log.i(LOG_TAG, s"Not skipping; inserting thing: $thing")
+        db add thing
+        false
       }
     } catch {
       case e: IllegalStateException =>
