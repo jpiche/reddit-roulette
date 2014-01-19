@@ -4,7 +4,7 @@ import scalaz._, Scalaz._
 import scalaz.std.boolean.unless
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future, promise}
+import scala.concurrent.{Future, promise}
 import scala.util.{Failure, Success}
 import scala.collection.mutable
 
@@ -253,9 +253,9 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
             // else, it should be safe
             } else {
               val fallback = ThingWebData(web, thing)
-              if (thing.isImg || web.isImage) {
+              if ((thing.isImg && ! thing.goodUrl.toLowerCase.endsWith("gif")) || web.isImage) {
                 Web.get(thing.goodUrl) onComplete {
-                  case Success(webBmp: WebData) =>
+                  case Success(webBmp: WebData) if webBmp.contentType.toLowerCase != "image/gif" =>
                     p success ThingBitmapData(webBmp, thing)
 
                   case Success(fail: WebFail) =>
