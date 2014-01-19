@@ -19,12 +19,18 @@ abstract class ThingFragment extends Fragment with BaseFrag {
     val args = getArguments
     if (args != null) {
       thing = Thing(args)
-      thing map { t =>
-        getActivity.getActionBar.setTitle(t.title)
-      }
     }
 
     setHasOptionsMenu(true)
+  }
+
+  override def onResume() {
+    super.onResume()
+
+    thing map { t =>
+      getActivity.getActionBar.setTitle(t.title)
+    }
+    return
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {

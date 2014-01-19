@@ -9,7 +9,7 @@ final class RouletteApp extends Application with LogTag {
   override def onCreate() {
     super.onCreate()
 
-    TestFlight.takeOff(this, RouletteApp.TESTFLIGHT_KEY)
+//    TestFlight.takeOff(this, RouletteApp.TESTFLIGHT_KEY)
   }
 
   override def onLowMemory() {
@@ -21,7 +21,7 @@ final class RouletteApp extends Application with LogTag {
 }
 
 object RouletteApp {
-  private final val TESTFLIGHT_KEY = "cfbfca8d-e88f-4ea7-856a-2a77339d2a9e"
+//  private final val TESTFLIGHT_KEY = "cfbfca8d-e88f-4ea7-856a-2a77339d2a9e"
 
   // this is just for the fun of it
   private[redditroulette] val REDDIT_CLIENTID =

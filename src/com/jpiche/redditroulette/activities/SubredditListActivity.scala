@@ -10,6 +10,8 @@ import scala.util.Success
 import scala.concurrent.{Future, promise}
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import com.google.analytics.tracking.android.EasyTracker
+
 
 final class SubredditListActivity extends Activity with BaseAct {
 
@@ -36,6 +38,18 @@ final class SubredditListActivity extends Activity with BaseAct {
       listFrag map { _.notifyChange() }
       return
     }
+  }
+
+  override def onStart() {
+    super.onStart()
+
+    EasyTracker.getInstance(this).activityStart(this)
+  }
+
+  override def onStop() {
+    super.onStop()
+
+    EasyTracker.getInstance(this).activityStop(this)
   }
 
   override def onCreate(inst: Bundle) {

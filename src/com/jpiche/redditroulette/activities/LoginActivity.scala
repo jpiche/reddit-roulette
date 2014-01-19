@@ -11,6 +11,9 @@ import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import com.jpiche.redditroulette.fragments.LoginFragment.Listener
 
+import com.google.analytics.tracking.android.EasyTracker
+
+
 final class LoginActivity extends Activity with BaseAct {
 
   private lazy val authUrl: Uri = "https://ssl.reddit.com/api/v1/authorize.compact"
@@ -32,6 +35,18 @@ final class LoginActivity extends Activity with BaseAct {
     def onLoginRedirect(code: String, state: String) {
 
     }
+  }
+
+  override def onStart() {
+    super.onStart()
+
+    EasyTracker.getInstance(this).activityStart(this)
+  }
+
+  override def onStop() {
+    super.onStop()
+
+    EasyTracker.getInstance(this).activityStop(this)
   }
 
   override def onCreate(inst: Bundle) {

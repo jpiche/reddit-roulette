@@ -5,7 +5,22 @@ import com.jpiche.redditroulette.fragments.SettingsFragment
 import android.app.{Fragment, Activity}
 import com.jpiche.redditroulette.BaseAct
 
+import com.google.analytics.tracking.android.EasyTracker
+
+
 final class SettingsActivity extends Activity with BaseAct {
+
+  override def onStart() {
+    super.onStart()
+
+    EasyTracker.getInstance(this).activityStart(this)
+  }
+
+  override def onStop() {
+    super.onStop()
+
+    EasyTracker.getInstance(this).activityStop(this)
+  }
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)

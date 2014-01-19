@@ -86,12 +86,14 @@ final case class ImageFragment() extends ThingFragment {
   override def onResume() {
     super.onResume()
 
-    val img = getView.findView(TR.imageView)
-    img.setOnTouchListener {
-      if (prefs.swipeLeftNext)
-        flingListener
-      else
-        null
+    if (getView != null) {
+      val img = getView.findView(TR.imageView)
+      img.setOnTouchListener {
+        if (prefs.swipeLeftNext)
+          flingListener
+        else
+          null
+      }
     }
   }
 }

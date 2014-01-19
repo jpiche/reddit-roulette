@@ -5,7 +5,7 @@ import android.content.{Context, SharedPreferences}
 final class Prefs(val shared: SharedPreferences) {
   def allowNsfw = shared.getBoolean(Prefs.PREF_NSFW, false)
   def showSelf = shared.getBoolean(Prefs.PREF_SELF, false)
-  def swipeLeftNext = shared.getBoolean(Prefs.PREF_SWIPE_LEFT_NEXT, false)
+  def swipeLeftNext = shared.getBoolean(Prefs.PREF_SWIPE_LEFT_NEXT, true)
 }
 
 object Prefs {

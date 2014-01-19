@@ -23,6 +23,8 @@ import com.jpiche.redditroulette.fragments._
 import com.jpiche.redditroulette._
 import com.jpiche.redditroulette.net.{Web, WebFail, WebData}
 
+import com.google.analytics.tracking.android.EasyTracker
+
 
 final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
@@ -117,9 +119,23 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   }
 
 
+  override def onStart() {
+    super.onStart()
+
+    EasyTracker.getInstance(this).activityStart(this)
+  }
+
+  override def onStop() {
+    super.onStop()
+
+    EasyTracker.getInstance(this).activityStop(this)
+  }
+
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    getWindow.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
+
+    // This was here for testing and screenshots only.
+    // getWindow.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
     setContentView(R.layout.main)
 
     val start = if (savedInstanceState == null) {

@@ -47,7 +47,7 @@
     <string name="dialog_cancel">Cancel</string><!-- used in the subreddit dialog, but a generic word -->
 
     <!-- about -->
-    <string name="about_desc">What is this? Reddit Roulette has one purpose: to pick a random image or link off of Reddit and display it. The obvious follow-up question of course is why; so why? Why not.</string>
+    <string name="about_desc">Reddit Roulette is a simple app that serves one function: press a button and get a random image or link off of Reddit. Will be a picture of space, will be a cat, will you find something not so pleasant? Who knows, Reddit is a strange and vast place.</string>
 
     <!-- subreddit -->
     <string name="sub_add">Add Subreddit</string>
