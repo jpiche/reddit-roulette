@@ -22,7 +22,7 @@
             android:title="@string/pref_swipe_left_title"
             android:summary="@string/pref_swipe_left_summary"
             android:key="swipe_left_next"
-            android:defaultValue="false"
+            android:defaultValue="true"
             />
 
     <PreferenceScreen android:title="@string/pref_subreddits_title">

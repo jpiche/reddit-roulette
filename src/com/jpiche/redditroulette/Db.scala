@@ -114,12 +114,13 @@ sealed trait Db extends SQLiteOpenHelper {
 
   def nextSub(nsfw: Boolean, lastOpt: Option[String]): Future[Option[Subreddit]] = future {
     read { db =>
-      val select = if (nsfw) Db.subreddit.SELECT else Db.subreddit.SELECT_SFW
       val (sql, args: Array[String]) = lastOpt match {
+        case Some(last) if nsfw =>
+          (s"${Db.subreddit.SELECT} WHERE ${Db.subreddit.KEY_NAME} != ? ORDER BY RANDOM() LIMIT 1", Array(last))
         case Some(last) =>
-          (s"$select WHERE ${Db.subreddit.KEY_NAME} != ? ORDER BY RANDOM() LIMIT 1", Array(last))
+          (s"${Db.subreddit.SELECT_SFW} AND ${Db.subreddit.KEY_NAME} != ? ORDER BY RANDOM() LIMIT 1", Array(last))
         case _ =>
-          (s"$select ORDER BY RANDOM() LIMIT 1", Array.empty[String])
+          (s"${Db.subreddit.SELECT} ORDER BY RANDOM() LIMIT 1", Array.empty[String])
       }
       val cursor = db.rawQuery(sql, args)
       if (cursor.moveToFirst()) {
@@ -148,8 +149,8 @@ sealed trait Db extends SQLiteOpenHelper {
 
   def listSubs: Cursor = {
     val db = getReadableDatabase
-    val sql = s"${Db.subreddit.SELECT} ORDER BY ${Db.subreddit.KEY_NAME}"
-    db.rawQuery(sql, null)
+    val sql = s" ORDER BY ${Db.subreddit.KEY_NAME}"
+    db.rawQuery(Db.subreddit.SELECT, null)
   }
 
   def findSub(id: Long): Option[Subreddit] = read { db =>

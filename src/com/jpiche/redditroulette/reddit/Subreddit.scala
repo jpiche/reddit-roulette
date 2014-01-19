@@ -38,18 +38,29 @@ object Subreddit extends LogTag {
 
   private def aboutUrl(name: CharSequence) = s"http://www.reddit.com/r/$name/about.json"
 
+  /**
+   * This default list of subreddits have been hand-picked from top subscriber
+   * lists to give a reflection of various image-heavy subs.
+   */
   val defaultSubs = List(
-    Subreddit("earthporn"),
-    Subreddit("spaceporn"),
-    Subreddit("aww"),
-    Subreddit("puppies"),
-    Subreddit("cats"),
     Subreddit("pics"),
-    Subreddit("wtf", nsfw = true),
+    Subreddit("funny"),
+    Subreddit("aww"),
+    Subreddit("EarthPorn"),
+    Subreddit("spaceporn"),
+    Subreddit("gifs"),
+    Subreddit("FoodPorn"),
+    Subreddit("AbandonedPorn"),
+    Subreddit("worldnews"),
+    Subreddit("ArtPorn"),
+    Subreddit("wtf"),
+    Subreddit("cringepics"),
+    Subreddit("humanporn"),
     Subreddit("gonewild", nsfw = true),
     Subreddit("nsfw", nsfw = true),
+    Subreddit("fiftyfifty", nsfw = true),
     Subreddit("ginger", nsfw = true),
-    Subreddit("nsfw_hd", nsfw = true)
+    Subreddit("RealGirls", nsfw = true)
   )
 
   implicit def SubredditCodecJson: CodecJson[Subreddit] =

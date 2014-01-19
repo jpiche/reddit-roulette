@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import android.os.{Message, Handler, Bundle}
 import android.util.Log
-import android.app.{Activity, Fragment}
+import android.app.{FragmentManager, Activity, Fragment}
 import android.view.{WindowManager, MenuItem, View}
 import android.app.FragmentManager.OnBackStackChangedListener
 import android.content.{Context, Intent}
@@ -57,7 +57,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   private val homeListener = new HomeFragment.Listener {
     override def clickedGo() {
-      next(pop = false)
+      next()
     }
   }
 
@@ -68,7 +68,11 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   private sealed abstract class AbstractThingListener extends ThingListener {
     def onNext() {
-      next(pop = true)
+      next()
+    }
+
+    def onPrev() {
+      manager.popBackStack()
     }
 
     def onFinished() {
@@ -141,7 +145,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   }
 
   override def onNavigateUp(): Boolean = {
-    manager.popBackStack()
+    manager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
     isLoading.set(false)
     progressHandler.sendEmptyMessage(View.GONE)
     true
@@ -270,11 +274,8 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   /**
    * This function takes the `thingQueue` and actually assigns the things to
    * fragments.
-   *
-   * @param pop Whether to pop the previous fragment from the backstack; `true`
-   *            to pop it, `false` to leave it.
    */
-  private def next(pop: Boolean) {
+  private def next() {
     if (isLoading.get()) {
       Log.i(LOG_TAG, "Ran next() while post was still loading")
       return
@@ -297,9 +298,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     def add(frag: Fragment, tag: String) =
       handler.post(new Runnable {
         override def run() {
-          if (pop) {
-            manager.popBackStack()
-          }
           addFrag(frag, tag)
         }
       })

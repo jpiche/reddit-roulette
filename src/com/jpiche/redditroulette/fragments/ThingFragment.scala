@@ -57,4 +57,5 @@ trait ThingListener {
   def onFinished(): Unit
   def onProgress(prog: Int): Unit
   def onNext(): Unit
+  def onPrev(): Unit
 }

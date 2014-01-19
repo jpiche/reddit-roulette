@@ -16,6 +16,7 @@ final case class ImageFragment() extends ThingFragment {
       Log.d(LOG_TAG, s"fling: ${dir.toString}")
       dir match {
         case FlingLeft => listener map { _.onNext() }
+        case FlingRight => listener map { _.onPrev() }
         case _ =>
       }
       return
