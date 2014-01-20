@@ -37,14 +37,15 @@
     <string name="pref_swipe_left_summary">Swiping left on an image will load the next post and right the previous. This will not work on web content.</string>
     <string name="pref_subreddits_title">Manage Subreddits</string>
 
-    <!-- info dialog -->
+    <!-- generic dialog -->
     <string name="dialog_close">Close</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <!-- info dialog -->
     <string name="dialog_external">Open in Browser</string>
     <string name="dialog_open_comments">View Comments</string>
     <string name="dialog_thing_comments">Number of Comments</string>
     <string name="dialog_thing_score">Score</string>
-
-    <string name="dialog_cancel">Cancel</string><!-- used in the subreddit dialog, but a generic word -->
 
     <!-- about -->
     <string name="about_desc">Reddit Roulette is a simple app that serves one function: press a button and get a random image or link off of Reddit. Will be a picture of space, will be a cat, will you find something not so pleasant? Who knows, Reddit is a strange and vast place.</string>
@@ -53,9 +54,11 @@
     <string name="sub_add">Add Subreddit</string>
     <string name="sub_confirm_delete">Are you sure you would like to remove subreddit <b>%s</b>?</string>
     <string name="sub_confirm_delete_btn">Confirm Remove</string>
-
-    <string name="sub_add_title">Add Subreddit</string>
+    <string name="sub_delete_title">Remove Subreddit</string>
     <string name="sub_add_subtitle">Subreddit name</string>
     <string name="sub_add_btn">Add Subreddit</string>
+    <string name="sub_revert">Revert to defaults</string>
+    <string name="sub_revert_message">Would you like to revert subreddits to defaults, thus removing any subreddits that may have been added?</string>
+    <string name="sub_revert_confirm">Yes, Revert to defaults</string>
 
 </resources>

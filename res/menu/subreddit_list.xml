@@ -5,6 +5,12 @@
       tools:context=".activities.MainActivity"
         >
 
+    <item android:id="@+id/revert"
+          android:icon="@android:drawable/ic_menu_revert"
+          android:title="@string/sub_revert"
+          android:showAsAction="ifRoom"
+            />
+
     <item android:id="@+id/add"
           android:icon="@android:drawable/ic_menu_add"
           android:title="@string/sub_add"

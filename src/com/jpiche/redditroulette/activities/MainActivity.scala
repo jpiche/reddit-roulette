@@ -221,7 +221,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   override def onOptionsItemSelected(item: MenuItem): Boolean =
     item.getItemId match {
       case R.id.settings =>
-        Log.i(LOG_TAG, "settings menu item")
         val i = new Intent(this, classOf[SettingsActivity])
         startActivity(i)
         true
@@ -316,7 +315,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         Log.w(LOG_TAG, s"skipping!! thing: $thing")
         true
       } else {
-        Log.i(LOG_TAG, s"Not skipping; inserting thing: $thing")
         db add thing
         false
       }

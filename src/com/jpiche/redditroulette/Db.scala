@@ -43,6 +43,13 @@ sealed trait Db extends SQLiteOpenHelper {
     onCreate(db)
   }
 
+  def revertSubreddits(): Future[Unit] = write { db =>
+    db.execSQL(Db.subreddit.DROP)
+    db.execSQL(Db.subreddit.CREATE)
+
+    add(Subreddit.defaultSubs, db)
+  }
+
   def add(thing: Thing) {
     val values = new ContentValues()
     values.put(Db.things.KEY_ID, thing.id)
@@ -101,7 +108,7 @@ sealed trait Db extends SQLiteOpenHelper {
     add(subs, db)
   }
 
-  def add(subs: Seq[Subreddit], db: SQLiteDatabase): Unit = {
+  def add(subs: Seq[Subreddit], db: SQLiteDatabase) {
     db.beginTransaction()
     try {
       subs foreach { sub =>

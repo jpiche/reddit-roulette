@@ -22,12 +22,11 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
   private val handler = new Handler()
 
   def notifyChange() {
-    listAdapter map { a =>
-      val c = db.listSubs
-      a.changeCursor(c)
-
-      handler.post(new Runnable {
-        def run() {
+    handler.post(new Runnable {
+      def run() {
+        listAdapter map { a =>
+          val c = db.listSubs
+          a.changeCursor(c)
           val view = getView
           if (view != null) {
             val list = view findView TR.list
@@ -35,8 +34,9 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
             listAdapter = Some(a)
           }
         }
-      })
-    }
+        return
+      }
+    })
     return
   }
 
@@ -83,9 +83,30 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
   override def onOptionsItemSelected(item: MenuItem): Boolean =
     item.getItemId match {
       case R.id.add =>
-        Log.i(LOG_TAG, "Add btn")
         val s = SubredditAddDialogFragment()
         s.show(manager, SubredditAddDialogFragment.FRAG_TAG)
+        true
+
+      case R.id.revert =>
+        val builder = new AlertDialog.Builder(thisContext)
+        builder.setTitle(R.string.sub_revert)
+        builder.setMessage(R.string.sub_revert_message)
+        builder.setPositiveButton(R.string.sub_revert_confirm, new OnClickListener {
+          def onClick(dialog: DialogInterface, which: Int) {
+            db.revertSubreddits() onComplete {
+              case _ =>
+                notifyChange()
+                dialog.dismiss()
+            }
+          }
+        })
+        builder.setNegativeButton(R.string.dialog_cancel, new OnClickListener {
+          def onClick(dialog: DialogInterface, which: Int) {
+            dialog.dismiss()
+          }
+        })
+        builder.create().show()
+
         true
 
       case _ => super.onOptionsItemSelected(item)
@@ -99,7 +120,7 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
 
       val msg = getResources.getString(R.string.sub_confirm_delete, s.name)
       builder.setMessage(msg)
-
+      builder.setTitle(R.string.sub_delete_title)
       builder.setPositiveButton(R.string.sub_confirm_delete_btn, new OnClickListener {
         def onClick(dialog: DialogInterface, which: Int) {
           db.deleteSub(id) onComplete {
