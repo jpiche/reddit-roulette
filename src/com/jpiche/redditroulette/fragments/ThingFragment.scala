@@ -54,6 +54,14 @@ abstract class ThingFragment extends Fragment with BaseFrag {
         listener map { _.onNext() }
         true
 
+      case R.id.save =>
+        listener map { l =>
+          thing map { t =>
+            l.saveThing(t)
+          }
+        }
+        true
+
       case _ => super.onOptionsItemSelected(item)
     }
 }
@@ -64,4 +72,5 @@ trait ThingListener {
   def onProgress(prog: Int): Unit
   def onNext(): Unit
   def onPrev(): Unit
+  def saveThing(thing: Thing): Unit
 }

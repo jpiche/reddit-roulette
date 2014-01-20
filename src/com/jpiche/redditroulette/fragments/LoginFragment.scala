@@ -3,32 +3,46 @@ package com.jpiche.redditroulette.fragments
 import scalaz._, Scalaz._
 import com.jpiche.redditroulette.TypedResource._
 import android.app.Fragment
-import com.jpiche.redditroulette.{RouletteApp, FragTag, TR, BaseFrag}
+import com.jpiche.redditroulette.{FragTag, TR, BaseFrag}
 import android.webkit.{WebView, WebChromeClient, WebViewClient}
 import android.view.{View, ViewGroup, LayoutInflater}
 import android.os.Bundle
 import com.netaporter.uri.Uri.parse
 
+
 final case class LoginFragment() extends Fragment with BaseFrag {
+
+  private val REDIRECT_HOST = "redditroulette.jpiche.com"
+  private val REDIRECT_PATH = "/app-redirect/"
 
   var listener: Option[LoginFragment.Listener] = None
 
-  private lazy val webViewClient = new WebViewClient {
+  private val webViewClient = new WebViewClient {
     override def shouldOverrideUrlLoading(view: WebView, url: String): Boolean = {
-      val uri = parse("url")
-      val should = (uri.host | "") == RouletteApp.REDDIT_REDIRECT_HOST
-      if (should) {
+
+      val uri = parse(url)
+      val params = uri.query.paramMap
+
+      if (uri.host.isDefined
+        && uri.host.get == REDIRECT_HOST
+        && uri.path == REDIRECT_PATH
+        && params.contains("code")
+        && params.contains("state")
+      ) {
         val code = uri.query.param("code")
         val state = uri.query.param("state")
-        if (code.isDefined && state.isDefined) {
-          listener map { _.onLoginRedirect(code.get, state.get) }
+        listener map {
+          _.onLoginRedirect(code.get, state.get)
         }
+
         true
-      } else false
+      } else {
+        false
+      }
     }
   }
 
-  private lazy val webChromeClient = new WebChromeClient
+  private val webChromeClient = new WebChromeClient
 
   private var mUrl: Option[String] = None
 

@@ -24,4 +24,18 @@
           android:title="@string/menu_next"
           android:showAsAction="ifRoom"
             />
+
+    <item android:id="@+id/save"
+          android:title="@string/menu_save"
+          android:showAsAction="never"
+          android:enabled="false"
+          android:visible="false"
+            />
+
+    <item android:id="@+id/unsave"
+          android:title="@string/menu_unsave"
+          android:showAsAction="never"
+          android:enabled="false"
+          android:visible="false"
+            />
 </menu>

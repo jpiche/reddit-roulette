@@ -3,37 +3,73 @@ package com.jpiche.redditroulette.activities
 import scalaz._, Scalaz._
 
 import android.app.{Fragment, Activity}
-import com.jpiche.redditroulette.{RouletteApp, BaseAct}
-import android.os.Bundle
+import com.jpiche.redditroulette._
+import android.os.{Handler, Bundle}
 import com.jpiche.redditroulette.fragments.LoginFragment
 import android.util.Log
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import com.jpiche.redditroulette.fragments.LoginFragment.Listener
-
 import com.google.analytics.tracking.android.EasyTracker
+import com.jpiche.redditroulette.reddit.AccessToken
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Success
+import android.view.View
 
 
-final class LoginActivity extends Activity with BaseAct {
+final class LoginActivity extends Activity with BaseAct with TypedViewHolder {
 
-  private lazy val authUrl: Uri = "https://ssl.reddit.com/api/v1/authorize.compact"
-  private lazy val params = Seq(
+  private val authUrl: Uri = "https://ssl.reddit.com/api/v1/authorize.compact"
+  private val params = Seq(
     "client_id" -> RouletteApp.REDDIT_CLIENTID,
     "redirect_uri" -> RouletteApp.REDDIT_REDIRECT,
     "scope" -> RouletteApp.REDDIT_SCOPE,
     "duration" -> "permanent",
-    "state" -> "asdfasdf",
+    "state" -> "bvbhjiuyt454rf",
     "response_type" -> "code"
   )
 
-  private lazy val loginUrl: String = {
+  private val loginUrl: String = {
     val loginUri = authUrl addParams params
     loginUri.toString()
   }
 
-  private lazy val loginListener = new Listener {
+  private val handler = new Handler()
+
+  private lazy val progressLayout = findView(TR.progressLayout)
+
+  private val loginListener = new Listener {
     def onLoginRedirect(code: String, state: String) {
 
+      handler.post(new Runnable {
+        override def run() {
+          progressLayout setVisibility View.VISIBLE
+        }
+      })
+
+      AccessToken.request(code, state) onComplete {
+        case Success(Some(AccessToken(access, _, refresh, _))) =>
+          prefs accessToken access
+          prefs refreshToken refresh
+
+          Log.i(LOG_TAG, "Login successful!")
+          finish()
+
+        case _ =>
+          toast("Error while authenticating. Please try again.")
+
+          val s = LoginFragment(loginUrl)
+          handler.post(new Runnable {
+            override def run() {
+              progressLayout setVisibility View.GONE
+
+              val t = manager.beginTransaction()
+              t.replace(android.R.id.content, s, LoginFragment.FRAG_TAG)
+              t.commit()
+              return
+            }
+          })
+      }
     }
   }
 
@@ -51,12 +87,13 @@ final class LoginActivity extends Activity with BaseAct {
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
+    setContentView(R.layout.login)
 
     if (inst == null) {
       Log.d(LOG_TAG, s"loginUrl: $loginUrl")
       val s = LoginFragment(loginUrl)
       val t = manager.beginTransaction()
-      t.add(android.R.id.content, s, LoginFragment.FRAG_TAG)
+      t.add(R.id.container, s, LoginFragment.FRAG_TAG)
       t.commit()
     }
 

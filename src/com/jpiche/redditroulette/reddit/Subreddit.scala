@@ -2,9 +2,9 @@ package com.jpiche.redditroulette.reddit
 
 import argonaut._, Argonaut._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Future, promise}
 import scala.util.{Failure, Success, Random}
 import com.jpiche.redditroulette._
-import scala.concurrent.{Future, promise}
 import android.util.Log
 import scala.Some
 import com.jpiche.redditroulette.net._

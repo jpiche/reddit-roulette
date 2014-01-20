@@ -1,7 +1,6 @@
 package com.jpiche.redditroulette.activities
 
 import scalaz._, Scalaz._
-import scalaz.std.boolean.unless
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, promise}
@@ -13,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import android.os.{Message, Handler, Bundle}
 import android.util.Log
 import android.app.{FragmentManager, Activity, Fragment}
-import android.view.{WindowManager, MenuItem, View}
+import android.view.{MenuItem, View}
 import android.app.FragmentManager.OnBackStackChangedListener
 import android.content.{Context, Intent}
 import android.net.ConnectivityManager
@@ -91,6 +90,24 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
     def onProgress(prog: Int) {
       Message.obtain(progressHandler, prog, "percent").sendToTarget()
+    }
+
+    def saveThing(thing: Thing) {
+      import com.netaporter.uri.dsl._
+      if (prefs.isLoggedIn) {
+        val uri = "https://ssl.reddit.com/api/save" ? ("access_token" -> prefs.accessToken) & ("id" -> thing.name)
+        Web.post(uri.toString()) onComplete {
+          case Success(web@WebData(_, _)) =>
+            Log.i(LOG_TAG, s"https://ssl.reddit.com/api/save worked! ${web.toString}")
+          case Success(WebFail(conn)) =>
+            Log.e(LOG_TAG, s"https://ssl.reddit.com/api/save error: ${conn.getContent}")
+          case Failure(e) =>
+            Log.e(LOG_TAG, s"https://ssl.reddit.com/api/save error: $e")
+        }
+      } else {
+        toast("Not logged in. Try logging in first.")
+      }
+      return
     }
   }
 
@@ -336,7 +353,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     }
     isLoading.set(true)
 
-    unless(hasConnection) {
+    if ( ! hasConnection) {
       toast(R.string.no_internet)
       return
     }

@@ -22,6 +22,8 @@
     <string name="menu_info">Info</string>
     <string name="menu_next">Next</string>
     <string name="menu_external">Open in Browser</string>
+    <string name="menu_save">Save</string>
+    <string name="menu_unsave">Unsave</string>
 
     <!-- prefs -->
     <string name="pref_over18_title">Allow NSFW Content</string>

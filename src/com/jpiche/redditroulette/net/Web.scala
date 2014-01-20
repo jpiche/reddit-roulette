@@ -24,13 +24,17 @@ object Web extends LogTag {
   private lazy val client = new OkHttpClient
 
   def get(url: String)(implicit settings: WebSettings): Future[WebResult] =
-    get(new URL(url))
+    http(new URL(url), "GET")
 
-  private def get(url: URL)(implicit settings: WebSettings): Future[WebResult] = future {
+  def post(url: String)(implicit settings: WebSettings): Future[WebResult] =
+    http(new URL(url), "POST")
+
+  private def http(url: URL, method: String)(implicit settings: WebSettings): Future[WebResult] = future {
 
     val conn = client.open(url)
     conn.setUseCaches(true)
     conn.setRequestProperty("User-Agent", settings.userAgent)
+    conn.setRequestMethod(method)
 
     val status = conn.getResponseCode
     val headers = conn.getHeaderFields
