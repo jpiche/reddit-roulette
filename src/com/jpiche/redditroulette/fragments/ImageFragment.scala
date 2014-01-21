@@ -52,9 +52,10 @@ final case class ImageFragment() extends ThingFragment {
 
     val attachToRoot = false
     val v = inflater.inflate(TR.layout.fragment_image, container, attachToRoot)
-    val img = v.findView(TR.imageView)
 
-    val handler = new Handler()
+    val img = v findView TR.imageView
+    val prog = v findView TR.progressLayout
+    prog setVisibility View.VISIBLE
 
     future {
       try {
@@ -68,13 +69,10 @@ final case class ImageFragment() extends ThingFragment {
       }
     } onComplete {
       case Success(Some(bmp)) =>
-        handler.post(new Runnable {
-          def run() {
-            img setImageBitmap bmp
-            listener map { _.onFinished() }
-            return
-          }
-        })
+        run {
+          img setImageBitmap bmp
+          prog setVisibility View.GONE
+        }
 
       case _ =>
         listener map { _.onError(thing) }

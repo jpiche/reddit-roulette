@@ -1,7 +1,7 @@
 package com.jpiche.redditroulette
 
 import android.content.Context
-import android.os.{Build, Message, Handler}
+import android.os.{Looper, Build, Message, Handler}
 import android.os.Handler.Callback
 import android.widget.Toast
 import android.app.{FragmentManager, Activity, Fragment}
@@ -12,6 +12,7 @@ sealed trait Base extends LogTag {
 
   // abstract; needs to be implemented for `Activity` and `Fragment` separately
   protected val thisContext: Context
+  protected implicit val thisHandler: Handler
 
   protected def manager: FragmentManager
   protected implicit lazy val db: Db = Db(thisContext)
@@ -37,11 +38,23 @@ sealed trait Base extends LogTag {
 
   protected implicit def prefs = Prefs(thisContext)
   protected implicit lazy val webSettings = WebSettings(RouletteApp.USER_AGENT)
+
+  protected def run(f: => Any)(implicit handler: Handler): Unit = {
+    handler.post(new Runnable {
+      def run() {
+        f
+        return
+      }
+    })
+    return
+  }
 }
 
 trait BaseAct extends Base { this: Activity =>
   protected implicit val thisContext = this
   protected lazy val manager = getFragmentManager
+
+  protected implicit val thisHandler = new Handler()
 }
 
 trait BaseFrag extends Base { this: Fragment =>
@@ -49,6 +62,8 @@ trait BaseFrag extends Base { this: Fragment =>
   // to an activity
   protected implicit lazy val thisContext = getActivity
   protected lazy val manager = getFragmentManager
+
+  protected implicit val thisHandler = new Handler(Looper.getMainLooper)
 }
 
 trait LogTag {

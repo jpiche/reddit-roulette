@@ -7,9 +7,7 @@ import scala.concurrent.{Future, promise}
 import scala.util.{Failure, Success}
 import scala.collection.mutable
 
-import java.util.concurrent.atomic.AtomicBoolean
-
-import android.os.{Message, Handler, Bundle}
+import android.os.Bundle
 import android.util.Log
 import android.app.{FragmentManager, Activity, Fragment}
 import android.view.{MenuItem, View}
@@ -41,19 +39,8 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private var lastSub: Option[String] = None
   private var allowNsfwPref = false
 
-  private val isLoading = new AtomicBoolean(false)
   private val thingQueue = new mutable.SynchronizedQueue[Future[ThingData]]
-  private val handler = new Handler()
 
-  private val progressHandler = new Handler(new Handler.Callback {
-    def handleMessage(msg: Message): Boolean = {
-      msg.obj match {
-        case "percent" => progress setProgress msg.what
-        case _ => progressLayout setVisibility msg.what
-      }
-      false
-    }
-  })
 
   private val homeListener = new HomeFragment.Listener {
     override def clickedGo() {
@@ -82,16 +69,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       manager.popBackStack()
     }
 
-    def onFinished() {
-      progressHandler.sendEmptyMessage(View.GONE)
-      isLoading.set(false)
-      return
-    }
-
-    def onProgress(prog: Int) {
-      Message.obtain(progressHandler, prog, "percent").sendToTarget()
-    }
-
     def saveThing(thing: Thing) {
       import com.netaporter.uri.dsl._
       if (prefs.isLoggedIn) {
@@ -117,9 +94,9 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       thing match {
         case Some(t) =>
           Log.w(LOG_TAG, "Retrying URL with WebFragment: %s" format t.url)
-          runOnUiThread(new Runnable {
-            def run() = addFrag(WebFragment(webListener, t), WebFragment.FRAG_TAG)
-          })
+          run {
+            addFrag(WebFragment(webListener, t), WebFragment.FRAG_TAG)
+          }
 
         case None =>
           Log.w(LOG_TAG, "Thing is empty")
@@ -157,6 +134,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
     val start = if (savedInstanceState == null) {
       val homeFrag = HomeFragment(homeListener.some)
+      homeFrag.setRetainInstance(true)
       val t = manager.beginTransaction()
       t.add(R.id.container, homeFrag, HomeFragment.FRAG_TAG)
       t.commit()
@@ -210,8 +188,9 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   override def onNavigateUp(): Boolean = {
     manager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-    isLoading.set(false)
-    progressHandler.sendEmptyMessage(View.GONE)
+    run {
+      progressLayout setVisibility View.GONE
+    }
     true
   }
 
@@ -221,8 +200,8 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       val tag = manager.getBackStackEntryAt(manager.getBackStackEntryCount - 1).getName
       val f = manager findFragmentByTag tag
 
-      progressHandler.sendEmptyMessage(View.GONE)
-      isLoading.set(false)
+//      progressHandler.sendEmptyMessage(View.GONE)
+//      isLoading.set(false)
 
       if (f == null)
         manager.popBackStack()
@@ -347,18 +326,15 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
    * fragments.
    */
   private def next() {
-    if (isLoading.get()) {
-      Log.i(LOG_TAG, "Ran next() while post was still loading")
-      return
-    }
-    isLoading.set(true)
-
     if ( ! hasConnection) {
       toast(R.string.no_internet)
       return
     }
 
-    progressHandler.sendEmptyMessage(View.VISIBLE)
+    run {
+      progressLayout setVisibility View.VISIBLE
+    }
+
     val f = if (thingQueue.size > 0)
       thingQueue.dequeue()
     else
@@ -366,30 +342,29 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
     thingQueue += nextThing
 
-    def add(frag: Fragment, tag: String) =
-      handler.post(new Runnable {
-        override def run() {
-          addFrag(frag, tag)
-        }
-      })
-
     f onComplete {
       case Success(ThingBitmapData(webData: WebData, thing: Thing)) =>
         Log.i(LOG_TAG, s"Success with ThingWebData: $thing")
         val f = ImageFragment(imageListener, thing, webData)
-        add(f, ImageFragment.FRAG_TAG)
+        run {
+          addFrag(f, ImageFragment.FRAG_TAG)
+          progressLayout setVisibility View.GONE
+        }
 
       case Success(ThingWebData(webData: WebData, thing: Thing)) =>
         Log.i(LOG_TAG, s"Success with ThingBitmapData: $thing")
         val f = WebFragment(webListener, thing)
-        add(f, WebFragment.FRAG_TAG)
+        run {
+          addFrag(f, WebFragment.FRAG_TAG)
+          progressLayout setVisibility View.GONE
+        }
 
       case Failure(e) =>
         Log.i(LOG_TAG, s"Failure in next(): $e")
-        progressHandler.sendEmptyMessage(View.GONE)
+        run {
+          progressLayout setVisibility View.GONE
+        }
     }
-
-    return
   }
 
   private def addFrag(frag: Fragment, tag: String) {
@@ -397,6 +372,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     t.replace(R.id.container, frag, tag)
     t.addToBackStack(null)
     t.commit()
+    Log.i(LOG_TAG, s"Back stack size: ${manager.getBackStackEntryCount}")
     return
   }
 

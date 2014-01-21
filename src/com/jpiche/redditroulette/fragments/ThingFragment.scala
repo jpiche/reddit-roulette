@@ -68,8 +68,8 @@ abstract class ThingFragment extends Fragment with BaseFrag {
 
 trait ThingListener {
   def onError(thing: Option[Thing]): Unit
-  def onFinished(): Unit
-  def onProgress(prog: Int): Unit
+//  def onFinished(): Unit
+//  def onProgress(prog: Int): Unit
   def onNext(): Unit
   def onPrev(): Unit
   def saveThing(thing: Thing): Unit

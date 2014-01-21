@@ -10,16 +10,17 @@ import android.util.Log
 
 final case class WebFragment() extends ThingFragment {
 
-  private lazy val webViewClient = new WebViewClient
-  private lazy val webChromeClient = new WebChromeClient {
-    override def onProgressChanged(view: WebView, prog: Int) {
-      if (prog < 100)
-        listener map { _ onProgress prog }
-      else
-        listener map { _.onFinished() }
-      return
+  private lazy val webViewClient = new WebViewClient {
+    override def onPageFinished(view: WebView, url: String) {
+      val view = getView
+      if (view != null) {
+        val prog = view findView TR.progressLayout
+        prog setVisibility View.GONE
+      }
     }
   }
+  private lazy val webChromeClient = new WebChromeClient
+
 
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
@@ -32,6 +33,10 @@ final case class WebFragment() extends ThingFragment {
 
     val attachToRoot = false
     val v = inflater.inflate(TR.layout.fragment_web, container, attachToRoot)
+
+    val prog = v findView TR.progressLayout
+    prog setVisibility View.VISIBLE
+
     val web = v.findView(TR.web)
     web.getSettings.setJavaScriptEnabled(true)
     web.getSettings.setLoadWithOverviewMode(true)
