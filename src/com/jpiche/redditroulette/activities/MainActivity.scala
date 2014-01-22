@@ -9,11 +9,14 @@ import scala.collection.mutable
 
 import android.os.Bundle
 import android.util.Log
-import android.app.{FragmentManager, Activity, Fragment}
-import android.view.{MenuItem, View}
-import android.app.FragmentManager.OnBackStackChangedListener
+import android.app.{Activity, Fragment}
+import android.view.MenuItem
 import android.content.{Context, Intent}
 import android.net.ConnectivityManager
+
+import android.support.v4.view.PagerAdapter.POSITION_NONE
+import android.support.v4.view.ViewPager.SimpleOnPageChangeListener
+import android.support.v13.app.FragmentStatePagerAdapter
 
 import com.jpiche.redditroulette.reddit.Thing
 import com.jpiche.redditroulette.fragments._
@@ -33,40 +36,84 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private final case class ThingBitmapData(webData: WebData, thing: Thing) extends ThingData
 
 
-  private lazy val progressLayout = findView(TR.progressLayout)
-  private lazy val progress = findView(TR.progress)
+  private lazy val viewPagerAdapter = new FragmentStatePagerAdapter(getFragmentManager) with ThingPagerAdapter
+  private lazy val viewPager = findView(TR.viewPager)
 
   private var lastSub: Option[String] = None
   private var allowNsfwPref = false
 
-  private val thingQueue = new mutable.SynchronizedQueue[Future[ThingData]]
+  private var frags = mutable.ArrayBuffer.empty[Fragment]
 
 
   private val homeListener = new HomeFragment.Listener {
     override def clickedGo() {
-      next()
+      val size = frags.size
+      if (size > 5) {
+        run {
+          val last = frags.takeRight(5)
+          frags.clear()
+          frags += HomeFragment()
+          frags ++= last
+          viewPagerAdapter.notifyDataSetChanged()
+          viewPager.setCurrentItem(frags.size - 1, true)
+        }
+      } else {
+        viewPager.setCurrentItem(size - 1, true)
+      }
     }
   }
 
   private val nsfwListener = new NsfwDialogListener {
     override def onDismiss() {
-      thingQueue += nextThing
+      run {
+        frags += LoadingFragment()
+        viewPagerAdapter.notifyDataSetChanged()
+      }
+      next(1)
       return
     }
   }
 
-  private val backStackListener = new OnBackStackChangedListener {
-    def onBackStackChanged() = shouldActionUp()
+  private val viewPagerListener = new SimpleOnPageChangeListener {
+    override def onPageSelected(p: Int) {
+
+      val count = frags.count {
+        case load: LoadingFragment => true
+        case _ => false
+      }
+
+      Log.i(LOG_TAG, s"onPageSelected ($p) with loading count ($count)")
+
+      if (p == frags.size - 1 && count <= 2) {
+        run {
+          frags += LoadingFragment()
+          viewPagerAdapter.notifyDataSetChanged()
+          next(frags.size - 1)
+        }
+      }
+
+      frags(p) match {
+        case frag: ThingFragment if frag.thing.isDefined =>
+          getActionBar setTitle frag.thing.get.title
+        case load: LoadingFragment =>
+          getActionBar setTitle R.string.loading
+        case _ =>
+          getActionBar setTitle R.string.app_name
+      }
+
+      shouldActionUp()
+    }
   }
 
-
   private sealed abstract class AbstractThingListener extends ThingListener {
-    def onNext() {
-      next()
-    }
-
-    def onPrev() {
-      manager.popBackStack()
+    def onNext(position: Int) {
+      val i = viewPager.getCurrentItem
+      if (i < frags.size) {
+        viewPager.setCurrentItem(i + 1, true)
+      } else {
+        viewPager.setCurrentItem(i - 1)
+        viewPager.setCurrentItem(i)
+      }
     }
 
     def saveThing(thing: Thing) {
@@ -89,14 +136,11 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   }
 
   private val imageListener = new AbstractThingListener {
-    def onError(thing: Option[Thing]) {
-      manager.popBackStack()
+    def onError(position: Int, thing: Option[Thing]) {
       thing match {
         case Some(t) =>
           Log.w(LOG_TAG, "Retrying URL with WebFragment: %s" format t.url)
-          run {
-            addFrag(WebFragment(webListener, t), WebFragment.FRAG_TAG)
-          }
+          replaceFrag(position, WebFragment(position, t))
 
         case None =>
           Log.w(LOG_TAG, "Thing is empty")
@@ -106,9 +150,9 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   }
 
   private val webListener = new AbstractThingListener {
-    def onError(thing: Option[Thing]) {
-      manager.popBackStack()
+    def onError(position: Int, thing: Option[Thing]) {
       toast(R.string.url_load_error)
+      next(position)
     }
   }
 
@@ -127,18 +171,9 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-
-    // This was here for testing and screenshots only.
-    // getWindow.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
     setContentView(R.layout.main)
 
     val start = if (savedInstanceState == null) {
-      val homeFrag = HomeFragment(homeListener.some)
-      homeFrag.setRetainInstance(true)
-      val t = manager.beginTransaction()
-      t.add(R.id.container, homeFrag, HomeFragment.FRAG_TAG)
-      t.commit()
-
       if (prefs contains Prefs.PREF_NSFW) {
         true
       } else {
@@ -149,17 +184,20 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       true
     }
 
-    progress.setMax(100)
     allowNsfwPref = prefs.allowNsfw
+
+    frags += HomeFragment()
 
     if (start) {
       // On first launch, the NSFW dialog will show, in which case, we don't
       // want to start pre-fetching until a NSFW pref is chosen.
-      thingQueue += nextThing
+      frags += LoadingFragment()
+      next(1)
     }
 
-    manager addOnBackStackChangedListener backStackListener
-    shouldActionUp()
+    viewPager setAdapter viewPagerAdapter
+    viewPager setOnPageChangeListener viewPagerListener
+    viewPager setOffscreenPageLimit 1 // this is the default, but let's be explicit about it
   }
 
   override def onResume() {
@@ -168,12 +206,9 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     val newNsfw = prefs.allowNsfw
     if (newNsfw != allowNsfwPref) {
       allowNsfwPref = newNsfw
-
-      // TODO: kill the threads first
-      thingQueue.clear()
-
-      thingQueue += nextThing
     }
+
+    shouldActionUp()
     return
   }
 
@@ -187,31 +222,27 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   }
 
   override def onNavigateUp(): Boolean = {
-    manager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-    run {
-      progressLayout setVisibility View.GONE
+    if (frags.size > 1) {
+      run {
+        frags.clear()
+        frags += HomeFragment()
+        viewPagerAdapter.notifyDataSetChanged()
+      }
     }
     true
   }
 
   override def onBackPressed() {
-    // TODO: double check this code
-    if (manager.getBackStackEntryCount > 0) {
-      val tag = manager.getBackStackEntryAt(manager.getBackStackEntryCount - 1).getName
-      val f = manager findFragmentByTag tag
-
-//      progressHandler.sendEmptyMessage(View.GONE)
-//      isLoading.set(false)
-
-      if (f == null)
-        manager.popBackStack()
-      else f match {
-        case web: WebFragment if web.webView.canGoBack => web.webView.goBack()
-        case _ => manager.popBackStack()
+    val p = viewPager.getCurrentItem
+    if (p > 0)
+      frags(p) match {
+        case web@WebFragment() if web.webView.canGoBack =>
+          web.webView.goBack()
+        case _ =>
+          viewPager.setCurrentItem(p - 1, true)
       }
-    } else {
+    else
       super.onBackPressed()
-    }
   }
 
   override def onOptionsItemSelected(item: MenuItem): Boolean =
@@ -236,7 +267,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     }
 
   private def shouldActionUp() {
-    getActionBar.setDisplayHomeAsUpEnabled(manager.getBackStackEntryCount > 0)
+    getActionBar.setDisplayHomeAsUpEnabled(viewPager.getCurrentItem > 0)
   }
 
   /**
@@ -267,7 +298,14 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
               if ((thing.isImg && ! thing.goodUrl.toLowerCase.endsWith("gif")) || web.isImage) {
                 Web.get(thing.goodUrl) onComplete {
                   case Success(webBmp: WebData) if webBmp.contentType.toLowerCase != "image/gif" =>
-                    p success ThingBitmapData(webBmp, thing)
+                    try {
+                      val bmp = webBmp.toBitmap
+                      p success ThingBitmapData(webBmp, thing)
+                    } catch {
+                      case oom: OutOfMemoryError =>
+                        Log.w(LOG_TAG, s"OutOfMemoryError with thing $thing")
+                        p success fallback
+                    }
 
                   case Success(fail: WebFail) =>
                     p success fallback
@@ -321,64 +359,78 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     }
   }
 
+  private def replaceFrag(p: Int, f: Fragment) {
+    if (p >= 0 && p < frags.size) {
+      run {
+        frags.update(p, f)
+        viewPagerAdapter.notifyDataSetChanged()
+      }
+    }
+  }
+
   /**
    * This function takes the `thingQueue` and actually assigns the things to
    * fragments.
    */
-  private def next() {
+  private def next(p: Int) {
     if ( ! hasConnection) {
       toast(R.string.no_internet)
       return
     }
 
-    run {
-      progressLayout setVisibility View.VISIBLE
+
+    val f = nextThing
+
+    def x(f: Fragment) {
+      replaceFrag(p, f)
     }
 
-    val f = if (thingQueue.size > 0)
-      thingQueue.dequeue()
-    else
-      nextThing
-
-    thingQueue += nextThing
-
     f onComplete {
-      case Success(ThingBitmapData(webData: WebData, thing: Thing)) =>
+      case Success(ThingBitmapData(webData: WebData, thing: Thing)) if webData.toBitmap.isDefined =>
         Log.i(LOG_TAG, s"Success with ThingWebData: $thing")
-        val f = ImageFragment(imageListener, thing, webData)
-        run {
-          addFrag(f, ImageFragment.FRAG_TAG)
-          progressLayout setVisibility View.GONE
+        val f = ImageFragment(p, thing, webData)
+        x(f)
+        if (viewPager.getCurrentItem == p) {
+          run {
+            getActionBar setTitle thing.title
+          }
         }
 
       case Success(ThingWebData(webData: WebData, thing: Thing)) =>
         Log.i(LOG_TAG, s"Success with ThingBitmapData: $thing")
-        val f = WebFragment(webListener, thing)
-        run {
-          addFrag(f, WebFragment.FRAG_TAG)
-          progressLayout setVisibility View.GONE
+        val f = WebFragment(p, thing)
+        x(f)
+        if (viewPager.getCurrentItem == p) {
+          run {
+            getActionBar setTitle thing.title
+          }
         }
 
       case Failure(e) =>
         Log.i(LOG_TAG, s"Failure in next(): $e")
-        run {
-          progressLayout setVisibility View.GONE
-        }
     }
-  }
-
-  private def addFrag(frag: Fragment, tag: String) {
-    val t = manager.beginTransaction()
-    t.replace(R.id.container, frag, tag)
-    t.addToBackStack(null)
-    t.commit()
-    Log.i(LOG_TAG, s"Back stack size: ${manager.getBackStackEntryCount}")
-    return
   }
 
   private def hasConnection: Boolean = {
     val conn = getSystemService(Context.CONNECTIVITY_SERVICE).asInstanceOf[ConnectivityManager]
     val net = conn.getActiveNetworkInfo
     net != null && net.isConnected
+  }
+
+  // ------
+
+  private trait ThingPagerAdapter extends FragmentStatePagerAdapter with LogTag {
+
+    override def getCount: Int = frags.size
+    override def getItem(p: Int): Fragment = frags(p)
+
+    override def getItemPosition(obj: Any): Int = {
+      Log.d(LOG_TAG, s"getItemPosition with obj: $obj")
+      obj match {
+        case f: Fragment if frags contains f =>
+          frags indexOf f
+        case _ => POSITION_NONE
+      }
+    }
   }
 }

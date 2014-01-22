@@ -26,7 +26,8 @@ libraryDependencies ++= Seq(
   "org.scalaz" %% "scalaz-core" % "7.0.5",
   "com.squareup.okhttp" % "okhttp" % "1.2.1",
   "io.argonaut" %% "argonaut" % "6.0.1",
-  "com.netaporter" %% "scala-uri" % "0.4.1-SNAPSHOT"
+  "com.netaporter" %% "scala-uri" % "0.4.1-SNAPSHOT",
+  "com.android.support" % "support-v13" % "19.0.1"
 )
 
 resolvers ++= Seq(

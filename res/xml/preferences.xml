@@ -18,13 +18,6 @@
             android:defaultValue="false"
             />
 
-    <CheckBoxPreference
-            android:title="@string/pref_swipe_left_title"
-            android:summary="@string/pref_swipe_left_summary"
-            android:key="swipe_left_next"
-            android:defaultValue="true"
-            />
-
     <PreferenceScreen android:title="@string/pref_subreddits_title">
         <intent android:action="com.jpiche.redditroulette.SubredditList" />
     </PreferenceScreen>

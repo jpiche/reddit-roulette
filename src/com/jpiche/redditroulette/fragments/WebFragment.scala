@@ -21,13 +21,21 @@ final case class WebFragment() extends ThingFragment {
   }
   private lazy val webChromeClient = new WebChromeClient
 
+  override def onCreate(inst: Bundle) {
+    super.onCreate(inst)
+
+    val args = getArguments
+    if (args != null) {
+      position = args.getInt(ThingFragment.KEY_POSITION, position)
+    }
+  }
 
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
     if (thing.isEmpty) {
       Log.w(LOG_TAG, "Thing is empty")
-      listener map { _.onError(thing) }
+      listener map { _.onError(position, thing) }
       return null
     }
 
@@ -64,12 +72,13 @@ final case class WebFragment() extends ThingFragment {
 }
 
 object WebFragment extends FragTag {
-  private val URL_KEY = "URL_KEY"
+  private final val URL_KEY = "URL_KEY"
 
-  def apply(listener: ThingListener, thing: Thing): WebFragment = {
+  def apply(p: Int, thing: Thing): WebFragment = {
     val frag = new WebFragment()
-    frag.listener = Some(listener)
-    frag.setArguments(thing.toBundle)
+    val b = thing.toBundle
+    b.putInt(ThingFragment.KEY_POSITION, p)
+    frag.setArguments(b)
     frag
   }
 }

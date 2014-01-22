@@ -1,42 +1,31 @@
 package com.jpiche.redditroulette.fragments
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.future
-import scala.util.Success
-
 import android.view.{LayoutInflater, ViewGroup, View}
-import android.os.{Handler, Bundle}
+import android.os.Bundle
 import android.util.Log
+import android.graphics.Bitmap
 
 import com.jpiche.redditroulette.TypedResource._
-import com.jpiche.redditroulette._
+import com.jpiche.redditroulette.{TR, FragTag, LogTag}
 import com.jpiche.redditroulette.reddit.Thing
-import com.jpiche.redditroulette.net.{WebBitmapData, WebData, WebBitmap}
+import com.jpiche.redditroulette.net.WebData
 
 
 final case class ImageFragment() extends ThingFragment {
 
-  private lazy val flingListener = new FlingListener {
-    def onFling(dir: FlingDirection) {
-      Log.d(LOG_TAG, s"fling: ${dir.toString}")
-      dir match {
-        case FlingLeft => listener map { _.onNext() }
-        case FlingRight => listener map { _.onPrev() }
-        case _ =>
-      }
-      return
-    }
-  }
-
-  private var webData: Option[WebBitmap] = None
+  private var bitmap: Option[Bitmap] = None
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
 
     val args = getArguments
-    if (args != null && args.containsKey(ImageFragment.KEY_DATA)) {
-      val d = args.getByteArray(ImageFragment.KEY_DATA)
-      webData = Some(WebBitmapData(d))
+    if (args != null) {
+      if (args.containsKey(ImageFragment.KEY_BITMAP)) {
+        val bmp = args.getParcelable[Bitmap](ImageFragment.KEY_BITMAP)
+        bitmap = Some(bmp)
+      }
+
+      position = args.getInt(ThingFragment.KEY_POSITION, position)
     }
   }
 
@@ -45,8 +34,8 @@ final case class ImageFragment() extends ThingFragment {
                             savedInstanceState: Bundle): View = {
     Log.d(LOG_TAG, s"onCreateView with thing $thing")
 
-    if (thing.isEmpty || webData.isEmpty) {
-      listener map { _.onError(thing) }
+    if (thing.isEmpty || bitmap.isEmpty) {
+      listener map { _.onError(position, thing) }
       return null
     }
 
@@ -57,54 +46,25 @@ final case class ImageFragment() extends ThingFragment {
     val prog = v findView TR.progressLayout
     prog setVisibility View.VISIBLE
 
-    future {
-      try {
-        webData.get.toBitmap
-
-      } catch {
-        case oom: OutOfMemoryError =>
-          Log.w(LOG_TAG, s"OutOfMemoryError with thing $thing")
-          listener map { _.onError(thing) }
-          None
-      }
-    } onComplete {
-      case Success(Some(bmp)) =>
-        run {
-          img setImageBitmap bmp
-          prog setVisibility View.GONE
-        }
-
-      case _ =>
-        listener map { _.onError(thing) }
-    }
+    img setImageBitmap bitmap.get
+    prog setVisibility View.GONE
 
     v
   }
-
-  override def onResume() {
-    super.onResume()
-
-    if (getView != null) {
-      val img = getView.findView(TR.imageView)
-      img.setOnTouchListener {
-        if (prefs.swipeLeftNext)
-          flingListener
-        else
-          null
-      }
-    }
-  }
 }
 
-object ImageFragment extends FragTag {
-  private final val KEY_DATA = "__DATA"
+object ImageFragment extends FragTag with LogTag {
+  private final val KEY_BITMAP = "__BITMAP"
 
-  def apply(listener: ThingListener, thing: Thing, web: WebData): ImageFragment = {
+  def apply(position: Int, thing: Thing, web: WebData): ImageFragment = {
+
+    // This `.get` is safe since the surrounding call is wrapped in a check
+    val bmp = web.toBitmap.get
     val frag = new ImageFragment()
-    frag.listener = Some(listener)
 
     val b = thing.toBundle
-    b.putByteArray(KEY_DATA, web.data)
+    b.putInt(ThingFragment.KEY_POSITION, position)
+    b.putParcelable(KEY_BITMAP, bmp)
 
     frag.setArguments(b)
     frag

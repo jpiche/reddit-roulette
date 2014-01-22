@@ -8,9 +8,9 @@ import android.net.Uri
 import com.jpiche.redditroulette.reddit.Thing
 import android.app.Fragment
 
-abstract class ThingFragment extends Fragment with BaseFrag {
+abstract class ThingFragment extends Fragment with BaseFrag with PagerFrag {
 
-  protected var thing: Option[Thing] = None
+  var thing: Option[Thing] = None
   var listener: Option[ThingListener] = None
 
   override def onCreate(inst: Bundle) {
@@ -22,15 +22,6 @@ abstract class ThingFragment extends Fragment with BaseFrag {
     }
 
     setHasOptionsMenu(true)
-  }
-
-  override def onResume() {
-    super.onResume()
-
-    thing map { t =>
-      getActivity.getActionBar.setTitle(t.title)
-    }
-    return
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -51,7 +42,7 @@ abstract class ThingFragment extends Fragment with BaseFrag {
         true
 
       case R.id.next =>
-        listener map { _.onNext() }
+        listener map { _.onNext(position) }
         true
 
       case R.id.save =>
@@ -66,11 +57,12 @@ abstract class ThingFragment extends Fragment with BaseFrag {
     }
 }
 
+object ThingFragment {
+  final val KEY_POSITION = "__POSITION"
+}
+
 trait ThingListener {
-  def onError(thing: Option[Thing]): Unit
-//  def onFinished(): Unit
-//  def onProgress(prog: Int): Unit
-  def onNext(): Unit
-  def onPrev(): Unit
+  def onError(position: Int, thing: Option[Thing]): Unit
+  def onNext(position: Int): Unit
   def saveThing(thing: Thing): Unit
 }

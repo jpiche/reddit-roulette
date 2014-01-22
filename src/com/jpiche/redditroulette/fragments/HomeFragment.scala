@@ -8,7 +8,10 @@ import android.view.View.OnClickListener
 import com.jpiche.redditroulette._
 import android.util.Log
 
-final case class HomeFragment() extends Fragment with BaseFrag with LogTag with OnClickListener {
+final case class HomeFragment() extends Fragment
+    with BaseFrag
+    with LogTag
+    with OnClickListener {
 
   // this is a var instead of a case class argument because Android requires
   // a public empty constructor
@@ -57,24 +60,18 @@ final case class HomeFragment() extends Fragment with BaseFrag with LogTag with 
     super.onCreateOptionsMenu(menu, inflater)
   }
 
-  def showBtn() {
-    val goBtn = getView.findView(TR.go_btn)
-    handler.post(new Runnable {
-      def run() {
-        goBtn.setVisibility(View.VISIBLE)
-      }
-    })
-    return
-  }
+//  def showBtn() {
+//    val goBtn = getView.findView(TR.go_btn)
+//    handler.post(new Runnable {
+//      def run() {
+//        goBtn.setVisibility(View.VISIBLE)
+//      }
+//    })
+//    return
+//  }
 }
 
 object HomeFragment extends FragTag {
-
-  def apply(listener: Option[HomeFragment.Listener]) = {
-    val h = new HomeFragment()
-    h.listener = listener
-    h
-  }
 
   trait Listener {
     def clickedGo(): Unit
