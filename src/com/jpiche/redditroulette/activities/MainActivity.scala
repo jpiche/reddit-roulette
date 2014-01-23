@@ -24,6 +24,8 @@ import com.jpiche.redditroulette._
 import com.jpiche.redditroulette.net.{Web, WebFail, WebData}
 
 import com.google.analytics.tracking.android.EasyTracker
+import org.joda.time.DateTime
+import com.jpiche.redditroulette.views.ZoomOutPageTransformer
 
 
 final class MainActivity extends Activity with BaseAct with TypedViewHolder {
@@ -42,22 +44,14 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private var lastSub: Option[String] = None
   private var allowNsfwPref = false
 
-  private var frags = mutable.ArrayBuffer.empty[Fragment]
-
+  private val frags = mutable.ArrayBuffer.empty[Fragment]
+  private var lastClear: Long = DateTime.now.getMillis
 
   private val homeListener = new HomeFragment.Listener {
     override def clickedGo() {
-      val size = frags.size
-      if (size > 5) {
-        run {
-          val last = frags.takeRight(5)
-          frags.clear()
-          frags += HomeFragment()
-          frags ++= last
-          viewPagerAdapter.notifyDataSetChanged()
-          viewPager.setCurrentItem(frags.size - 1, true)
-        }
-      } else {
+      clearFrags()
+      run {
+        val size = frags.size
         viewPager.setCurrentItem(size - 1, true)
       }
     }
@@ -198,6 +192,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     viewPager setAdapter viewPagerAdapter
     viewPager setOnPageChangeListener viewPagerListener
     viewPager setOffscreenPageLimit 1 // this is the default, but let's be explicit about it
+    viewPager setPageTransformer(true, ZoomOutPageTransformer())
   }
 
   override def onResume() {
@@ -221,13 +216,22 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     }
   }
 
-  override def onNavigateUp(): Boolean = {
+  private def clearFrags() {
     if (frags.size > 1) {
       run {
-        frags.clear()
-        frags += HomeFragment()
+        lastClear = DateTime.now.getMillis
+        frags.reduceToSize(1)
+        frags += LoadingFragment()
         viewPagerAdapter.notifyDataSetChanged()
       }
+      next(1)
+    }
+  }
+
+  override def onNavigateUp(): Boolean = {
+    clearFrags()
+    run {
+      viewPager.setCurrentItem(0)
     }
     true
   }
@@ -378,33 +382,31 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       return
     }
 
-
     val f = nextThing
+    val time = DateTime.now.getMillis
 
-    def x(f: Fragment) {
+    def x(f: Fragment, thing: Thing) {
+      // If cleared after this fragment was requested, just drop it
+      if (lastClear > time) return
+
       replaceFrag(p, f)
+      if (viewPager.getCurrentItem == p) {
+        run {
+          getActionBar setTitle thing.title
+        }
+      }
     }
 
     f onComplete {
       case Success(ThingBitmapData(webData: WebData, thing: Thing)) if webData.toBitmap.isDefined =>
-        Log.i(LOG_TAG, s"Success with ThingWebData: $thing")
+        Log.d(LOG_TAG, s"Success with ThingWebData: $thing")
         val f = ImageFragment(p, thing, webData)
-        x(f)
-        if (viewPager.getCurrentItem == p) {
-          run {
-            getActionBar setTitle thing.title
-          }
-        }
+        x(f, thing)
 
       case Success(ThingWebData(webData: WebData, thing: Thing)) =>
-        Log.i(LOG_TAG, s"Success with ThingBitmapData: $thing")
+        Log.d(LOG_TAG, s"Success with ThingBitmapData: $thing")
         val f = WebFragment(p, thing)
-        x(f)
-        if (viewPager.getCurrentItem == p) {
-          run {
-            getActionBar setTitle thing.title
-          }
-        }
+        x(f, thing)
 
       case Failure(e) =>
         Log.i(LOG_TAG, s"Failure in next(): $e")
