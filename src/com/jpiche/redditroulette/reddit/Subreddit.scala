@@ -8,7 +8,6 @@ import com.jpiche.redditroulette._
 import android.util.Log
 import scala.Some
 import com.jpiche.redditroulette.net._
-import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 
 case class SubredditData(
@@ -21,8 +20,8 @@ object SubredditData {
 }
 
 case class Subreddit(
-    name: String,
-    nsfw: Boolean = false
+  name: String,
+  nsfw: Boolean = false
 ) {
   lazy val url = "http://www.reddit.com/r/%s/" format name
   lazy val hot = url + "hot.json?limit=100"

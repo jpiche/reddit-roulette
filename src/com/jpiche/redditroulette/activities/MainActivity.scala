@@ -47,6 +47,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private val frags = mutable.ArrayBuffer.empty[Fragment]
   private var lastClear: Long = DateTime.now.getMillis
 
+
   private val homeListener = new HomeFragment.Listener {
     override def clickedGo() {
       clearFrags()
@@ -201,6 +202,13 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     val newNsfw = prefs.allowNsfw
     if (newNsfw != allowNsfwPref) {
       allowNsfwPref = newNsfw
+    }
+
+    // reset time so any pending futures get zombied, forcing all prefs to be re-read
+    lastClear = DateTime.now.getMillis
+    val s = frags.size - 1
+    if (viewPager.getCurrentItem == s) {
+      next(s)
     }
 
     shouldActionUp()
