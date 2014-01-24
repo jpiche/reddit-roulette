@@ -5,7 +5,7 @@ import android.opengl.GLES20
 import android.graphics.{BitmapFactory, Bitmap}
 import android.util.Log
 
-final case class WebBitmapData(data: Array[Byte]) extends WebBitmap {
+final case class BitmapData(data: Array[Byte]) extends WebBitmap {
   lazy val toBitmap: Option[Bitmap] = toBitmap(data)
 }
 
@@ -16,6 +16,8 @@ trait WebBitmap { self =>
   private val LOG_TAG = self.getClass.getSimpleName
 
   protected def toBitmap(data: Array[Byte]): Option[Bitmap] = {
+    import WebBitmap._
+
     val bmp = BitmapFactory.decodeByteArray(data, 0, data.length)
     if (bmp == null) {
       Log.w(LOG_TAG, s"bitmap with length (${data.length}) failed to decode")
@@ -23,15 +25,14 @@ trait WebBitmap { self =>
     } else {
       val max = Math.max(bmp.getHeight, bmp.getWidth)
 
-      Log.d(LOG_TAG, s"Image max: $max; OPENGL_MAX: ${WebBitmap.OPENGL_MAX}")
-
       // If the image is too large to draw, then resize it.
-      if (max > WebBitmap.OPENGL_MAX) {
+      if (max > OPENGL_MAX) {
+        Log.d(LOG_TAG, s"Image max: $max; OPENGL_MAX: $OPENGL_MAX")
         bmp.recycle()
 
-        val scaleFactorPowerOfTwo: Double = Math.log(max.toDouble / WebBitmap.OPENGL_MAX.toDouble) / Math.log(2)
+        val scaleFactorPowerOfTwo: Double = Math.log(max.toDouble / OPENGL_MAX.toDouble) / Math.log(2)
         val scaleFactor = Math.round(Math.pow(2, Math.ceil(scaleFactorPowerOfTwo)))
-        Log.d(LOG_TAG, s"Image resize using scaleFactorPowerOfTwo: $scaleFactorPowerOfTwo, and scaleFactor: $scaleFactor")
+        Log.v(LOG_TAG, s"Image resize using scaleFactorPowerOfTwo: $scaleFactorPowerOfTwo, and scaleFactor: $scaleFactor")
 
         val options = new BitmapFactory.Options()
         options.inSampleSize = scaleFactor.toInt

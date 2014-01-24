@@ -26,6 +26,7 @@ import com.jpiche.redditroulette.net.{Web, WebFail, WebData}
 import com.google.analytics.tracking.android.EasyTracker
 import org.joda.time.DateTime
 import com.jpiche.redditroulette.views.ZoomOutPageTransformer
+import java.io.{FileOutputStream, File}
 
 
 final class MainActivity extends Activity with BaseAct with TypedViewHolder {
@@ -37,6 +38,12 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private final case class ThingWebData(webData: WebData, thing: Thing) extends ThingData
   private final case class ThingBitmapData(webData: WebData, thing: Thing) extends ThingData
 
+  private lazy val cacheDir = {
+    val ex = getExternalCacheDir
+    val cache = new File(ex, "img")
+    cache.mkdirs()
+    cache
+  }
 
   private lazy val viewPagerAdapter = new FragmentStatePagerAdapter(getFragmentManager) with ThingPagerAdapter
   private lazy val viewPager = findView(TR.viewPager)
@@ -60,10 +67,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   private val nsfwListener = new NsfwDialogListener {
     override def onDismiss() {
-      run {
-        frags += LoadingFragment()
-        viewPagerAdapter.notifyDataSetChanged()
-      }
       next(1)
       return
     }
@@ -77,14 +80,17 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         case _ => false
       }
 
-      Log.i(LOG_TAG, s"onPageSelected ($p) with loading count ($count)")
+      Log.d(LOG_TAG, s"onPageSelected ($p) with loading count ($count); frags(p): ${frags(p)}")
 
-      if (p == frags.size - 1 && count <= 2) {
+      val size = frags.size
+      if (p > 0 && count <= 2 && p == size - 1) {
         run {
-          frags += LoadingFragment()
+          frags += LoadingFragment(size - 1)
           viewPagerAdapter.notifyDataSetChanged()
-          next(frags.size - 1)
+          next(size - 1)
         }
+      } else if (count > 2 && p == size - 1) {
+        // too many, wait
       }
 
       frags(p) match {
@@ -92,7 +98,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
           getActionBar setTitle frag.thing.get.title
         case load: LoadingFragment =>
           getActionBar setTitle R.string.loading
-        case _ =>
+        case home: HomeFragment =>
           getActionBar setTitle R.string.app_name
       }
 
@@ -116,7 +122,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       if (prefs.isLoggedIn) {
         val uri = "https://ssl.reddit.com/api/save" ? ("access_token" -> prefs.accessToken) & ("id" -> thing.name)
         Web.post(uri.toString()) onComplete {
-          case Success(web@WebData(_, _)) =>
+          case Success(web@WebData(_, _, _)) =>
             Log.i(LOG_TAG, s"https://ssl.reddit.com/api/save worked! ${web.toString}")
           case Success(WebFail(conn)) =>
             Log.e(LOG_TAG, s"https://ssl.reddit.com/api/save error: ${conn.getContent}")
@@ -172,7 +178,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       if (prefs contains Prefs.PREF_NSFW) {
         true
       } else {
-        NsfwDialogFragment(nsfwListener).show(manager, NsfwDialogFragment.FRAG_TAG)
+        NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
         false
       }
     } else {
@@ -181,12 +187,11 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
     allowNsfwPref = prefs.allowNsfw
 
-    frags += HomeFragment()
+    frags ++= Seq(HomeFragment(), LoadingFragment(1))
 
     if (start) {
       // On first launch, the NSFW dialog will show, in which case, we don't
       // want to start pre-fetching until a NSFW pref is chosen.
-      frags += LoadingFragment()
       next(1)
     }
 
@@ -211,6 +216,8 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       next(s)
     }
 
+    db.subCache = None
+
     shouldActionUp()
     return
   }
@@ -220,6 +227,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       case h: HomeFragment => h.listener = homeListener.some
       case w: WebFragment => w.listener = webListener.some
       case i: ImageFragment => i.listener = imageListener.some
+      case n: NsfwDialogFragment => n.listener = nsfwListener.some
       case _ => return
     }
   }
@@ -229,7 +237,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       run {
         lastClear = DateTime.now.getMillis
         frags.reduceToSize(1)
-        frags += LoadingFragment()
+        frags += LoadingFragment(1)
         viewPagerAdapter.notifyDataSetChanged()
       }
       next(1)
@@ -290,58 +298,52 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private def nextThing: Future[ThingData] = {
     val p = promise[ThingData]()
 
-    db.nextSub(prefs.allowNsfw, lastSub) onComplete {
-      case Success(Some(sub)) =>
-        sub.next onComplete {
-          case Success((web: WebData, thing: Thing)) =>
+    val sub = db.nextSub(prefs.allowNsfw, lastSub)
+    sub.next onComplete {
+      case Success((web: WebData, thing: Thing)) =>
 
-            // if the post is marked nsfw even though the subreddit is not,
-            // and the user has nsfw off, skip it
-            if (thing.over18 && ! prefs.allowNsfw) {
-              p completeWith nextThing
+        // if the post is marked nsfw even though the subreddit is not,
+        // and the user has nsfw off, skip it
+        if (thing.over18 && ! prefs.allowNsfw) {
+          p completeWith nextThing
 
-            // look at the db for distance between this and that last time it was shown
-            } else if (needsSkip(thing)) {
-              p completeWith nextThing
+        // look at the db for distance between this and that last time it was shown
+        } else if (needsSkip(thing)) {
+          p completeWith nextThing
 
-            // else, it should be safe
-            } else {
-              val fallback = ThingWebData(web, thing)
-              if ((thing.isImg && ! thing.goodUrl.toLowerCase.endsWith("gif")) || web.isImage) {
-                Web.get(thing.goodUrl) onComplete {
-                  case Success(webBmp: WebData) if webBmp.contentType.toLowerCase != "image/gif" =>
-                    try {
-                      val bmp = webBmp.toBitmap
-                      p success ThingBitmapData(webBmp, thing)
-                    } catch {
-                      case oom: OutOfMemoryError =>
-                        Log.w(LOG_TAG, s"OutOfMemoryError with thing $thing")
-                        p success fallback
-                    }
+        // else, it should be safe
+        } else {
+          val fallback = ThingWebData(web, thing)
+          if (thing.isImg && ! thing.likelyGif) {
+            Web.get(thing.goodUrl) onComplete {
+              case Success(webBmp@WebData(_, data, Some(hash))) if ! web.contentType.isGif =>
 
-                  case Success(fail: WebFail) =>
-                    p success fallback
-
-                  case Failure(e) =>
-                    Log.e(LOG_TAG, s"api exception loading url (${thing.goodUrl}: $e")
-                    p success fallback
+                val imgFile = new File(cacheDir, hash)
+                if (imgFile.canWrite) {
+                  Log.d(LOG_TAG, s"can write to file path: ${imgFile.getAbsolutePath}")
+                  val writer = new FileOutputStream(imgFile)
+                  writer.write(data, 0, data.length)
+                  writer.flush()
+                  writer.close()
                 }
-              } else {
-                p success fallback
-              }
-              lastSub = sub.name.some
-            }
 
-          case Failure(e) =>
-            Log.e(LOG_TAG, s"api exception: $e")
-            p failure e
+                p success ThingBitmapData(webBmp, thing)
+
+              case Success(_) =>
+                p success fallback
+
+              case Failure(e) =>
+                Log.e(LOG_TAG, s"api exception loading url (${thing.goodUrl}: $e")
+                p success fallback
+            }
+          } else {
+            p success fallback
+          }
+          lastSub = sub.name.some
         }
-      case Success(None) =>
-        Log.e(LOG_TAG, s"Failed to find the next subreddit?")
-        p completeWith nextThing
 
       case Failure(e) =>
-        Log.e(LOG_TAG, s"Failed to load next subreddit. Error: $e")
+        Log.e(LOG_TAG, s"api exception: $e")
         p failure e
     }
     p.future
@@ -357,7 +359,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
    */
   private def needsSkip(thing: Thing): Boolean = {
     try {
-      if (db.shouldSkipThing(thing.id, 30)) {
+      if (db.shouldSkipThing(thing.id, 40)) {
         Log.w(LOG_TAG, s"skipping!! thing: $thing")
         true
       } else {
@@ -406,13 +408,13 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     }
 
     f onComplete {
-      case Success(ThingBitmapData(webData: WebData, thing: Thing)) if webData.toBitmap.isDefined =>
-        Log.d(LOG_TAG, s"Success with ThingWebData: $thing")
+      case Success(ThingBitmapData(webData: WebData, thing: Thing)) =>
+//        Log.d(LOG_TAG, s"Success with ThingBitmapData: $thing")
         val f = ImageFragment(p, thing, webData)
         x(f, thing)
 
-      case Success(ThingWebData(webData: WebData, thing: Thing)) =>
-        Log.d(LOG_TAG, s"Success with ThingBitmapData: $thing")
+      case Success(ThingWebData(_, thing: Thing)) =>
+//        Log.d(LOG_TAG, s"Success with ThingWebData: $thing")
         val f = WebFragment(p, thing)
         x(f, thing)
 
@@ -435,7 +437,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     override def getItem(p: Int): Fragment = frags(p)
 
     override def getItemPosition(obj: Any): Int = {
-      Log.d(LOG_TAG, s"getItemPosition with obj: $obj")
       obj match {
         case f: Fragment if frags contains f =>
           frags indexOf f

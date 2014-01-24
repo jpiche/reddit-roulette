@@ -7,7 +7,7 @@ import android.content.DialogInterface
 import android.content.DialogInterface.OnDismissListener
 
 
-final class NsfwDialogFragment extends DialogFragment with BaseFrag {
+final case class NsfwDialogFragment() extends DialogFragment with BaseFrag {
 
   var listener: Option[NsfwDialogListener] = None
 
@@ -40,13 +40,7 @@ final class NsfwDialogFragment extends DialogFragment with BaseFrag {
   }
 }
 
-object NsfwDialogFragment extends FragTag {
-  def apply(listener: NsfwDialogListener) = {
-    val frag = new NsfwDialogFragment
-    frag.listener = Some(listener)
-    frag
-  }
-}
+object NsfwDialogFragment extends FragTag
 
 trait NsfwDialogListener {
   def onDismiss(): Unit

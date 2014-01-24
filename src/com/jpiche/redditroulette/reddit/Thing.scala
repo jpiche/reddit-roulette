@@ -51,6 +51,7 @@ case class Thing(
     val u = List(".jpg", ".jpeg", ".png") exists { x => url endsWith x }
     (d && notAlbum) || u
   }
+  val likelyGif = url.toLowerCase endsWith ".gif"
 
   val goodUrl: String = if (isImg) {
     val imgur = """imgur\.com/(?:gallery/)?([a-zA-Z0-9]+)$""".r.unanchored

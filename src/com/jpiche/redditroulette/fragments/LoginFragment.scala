@@ -1,6 +1,5 @@
 package com.jpiche.redditroulette.fragments
 
-import scalaz._, Scalaz._
 import com.jpiche.redditroulette.TypedResource._
 import android.app.Fragment
 import com.jpiche.redditroulette.{FragTag, TR, BaseFrag}
@@ -51,7 +50,7 @@ final case class LoginFragment() extends Fragment with BaseFrag {
 
     val args = getArguments
     if (args != null) {
-      mUrl = args.getString(LoginFragment.URL_KEY).some
+      mUrl = Some(args.getString(LoginFragment.URL_KEY))
       getActivity.getActionBar.setTitle("Login to Reddit")
     }
   }

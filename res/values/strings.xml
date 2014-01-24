@@ -7,6 +7,7 @@
     <string name="go_btn">Play Reddit Roulette</string>
     <string name="what_is_this"><u>What is this?</u></string>
     <string name="loading">Loading&#8230;</string>
+    <string name="loading_image">Processing Image&#8230;</string>
 
     <!-- errors / toasts -->
     <string name="image_load_error">Error loading image</string>

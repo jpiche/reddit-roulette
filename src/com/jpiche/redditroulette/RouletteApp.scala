@@ -8,6 +8,7 @@ final class RouletteApp extends Application with LogTag {
   override def onCreate() {
     super.onCreate()
 
+
   }
 
   override def onLowMemory() {

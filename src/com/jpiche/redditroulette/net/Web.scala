@@ -1,7 +1,6 @@
 package com.jpiche.redditroulette.net
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import scala.concurrent.{Future, future}
 import com.squareup.okhttp.OkHttpClient
 import java.net.URL
@@ -9,6 +8,7 @@ import java.io.{ByteArrayOutputStream, InputStream}
 import scala.annotation.tailrec
 import android.util.Log
 import com.jpiche.redditroulette.LogTag
+import java.security.MessageDigest
 
 sealed trait Web {
   val url: URL
@@ -37,18 +37,25 @@ object Web extends LogTag {
     conn.setRequestMethod(method)
 
     val status = conn.getResponseCode
-    val headers = conn.getHeaderFields
-    Log.d(LOG_TAG, s"header fields for url (${url.toString}}): ${headers.toString}")
+//    val headers = conn.getHeaderFields
+//    Log.d(LOG_TAG, s"header fields for url (${url.toString}}): ${headers.toString}")
 
     if (status >= 400) {
       conn.disconnect()
       WebFail(conn)
 
     } else {
+//      val contentType = ContentType(conn)
       val in = conn.getInputStream
       try {
-        val resp = readFull(in)
-        WebData(conn, resp)
+
+//        if (contentType.isImage) {
+          val (resp, hash) = readFullAndHash(in)
+          WebData(conn, resp, Some(hash))
+//        } else {
+//          val resp = readFull(in)
+//          WebData(conn, resp)
+//        }
 
       } finally {
         in.close()
@@ -56,19 +63,40 @@ object Web extends LogTag {
     }
   }
 
-  private def readFull(in: InputStream): Array[Byte] = {
+  private def readFullAndHash(in: InputStream): (Array[Byte], String) = {
     val out = new ByteArrayOutputStream(BUFFER_SIZE)
     val buffer = new Array[Byte](BUFFER_SIZE)
+    val md = MessageDigest.getInstance("SHA1")
 
     @tailrec
     def read() {
       val count = in.read(buffer)
       if (count != -1) {
         out.write(buffer, 0, count)
+        md.update(buffer, 0, count)
         read()
       }
     }
     read()
-    out.toByteArray
+    val byteHash: Array[Byte] = md.digest()
+    val hash: String = byteHash.map("%02X" format _).mkString
+    Log.d(LOG_TAG, s"hash for byte array: $hash")
+    (out.toByteArray, hash)
   }
+//
+//  private def readFull(in: InputStream): Array[Byte] = {
+//    val out = new ByteArrayOutputStream(BUFFER_SIZE)
+//    val buffer = new Array[Byte](BUFFER_SIZE)
+//
+//    @tailrec
+//    def read() {
+//      val count = in.read(buffer)
+//      if (count != -1) {
+//        out.write(buffer, 0, count)
+//        read()
+//      }
+//    }
+//    read()
+//    out.toByteArray
+//  }
 }

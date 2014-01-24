@@ -8,6 +8,7 @@ import com.jpiche.redditroulette.reddit.{Thing, Subreddit}
 import org.joda.time.DateTime
 import android.database.Cursor
 import scala.concurrent.{Future, future}
+import scala.util.Random
 
 
 sealed trait Db extends SQLiteOpenHelper {
@@ -68,6 +69,7 @@ sealed trait Db extends SQLiteOpenHelper {
       FROM ${Db.things.TABLE}
       WHERE ${Db.things.KEY_ID} = ?
       ORDER BY ${Db.things.KEY_PK} DESC
+      LIMIT 1
       """
     val cursor = db.rawQuery(sql, Array(id))
     val should = if (cursor.moveToFirst()) {
@@ -88,8 +90,8 @@ sealed trait Db extends SQLiteOpenHelper {
     val sql = s"""
       SELECT ${Db.things.KEY_PK}
       FROM ${Db.things.TABLE}
-      WHERE ${Db.things.KEY_ID} = ?
       ORDER BY ${Db.things.KEY_PK} DESC
+      LIMIT 1
       """
     val cursor = db.rawQuery(sql, Array())
 
@@ -146,27 +148,18 @@ sealed trait Db extends SQLiteOpenHelper {
     subs
   }
 
-  def nextSub(nsfw: Boolean, lastOpt: Option[String]): Future[Option[Subreddit]] = future {
-    read { db =>
-      val (sql, args: Array[String]) = lastOpt match {
-        case Some(last) if nsfw =>
-          (s"${Db.subreddit.SELECT} WHERE 1 ORDER BY RANDOM() LIMIT 1", Array.empty[String])
-        case Some(last) =>
-          (s"${Db.subreddit.SELECT_SFW} ORDER BY RANDOM() LIMIT 1", Array.empty[String])
-        case _ =>
-          (s"${Db.subreddit.SELECT} ORDER BY RANDOM() LIMIT 1", Array.empty[String])
-      }
-      val cursor = db.rawQuery(sql, args)
-      if (cursor.moveToFirst()) {
-        val s = Subreddit(
-          name = cursor.getString(2),
-          nsfw = cursor.getInt(3) > 0
-        )
-        cursor.close()
-        Some(s)
-      } else {
-        None
-      }
+  var subCache: Option[(Boolean, Seq[Subreddit])] = None
+
+  def nextSub(nsfw: Boolean, lastOpt: Option[String]): Subreddit = {
+    subCache match {
+      case Some((cacheNsfw, cacheSeq)) if cacheNsfw == nsfw =>
+        val i = Random.nextInt(cacheSeq.size)
+        cacheSeq(i)
+      case _ =>
+        val all = allSubs(nsfw)
+        val i = Random.nextInt(all.size)
+        subCache = Some((nsfw, all))
+        all(i)
     }
   }
 

@@ -10,6 +10,15 @@ import com.jpiche.redditroulette.TypedResource._
 
 final case class LoadingFragment() extends Fragment with BaseFrag with PagerFrag {
 
+  override def onCreate(inst: Bundle) {
+    super.onCreate(inst)
+
+    val args = getArguments
+    if (args != null) {
+      position = args.getInt(ThingFragment.KEY_POSITION, position)
+    }
+  }
+
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
@@ -24,4 +33,13 @@ final case class LoadingFragment() extends Fragment with BaseFrag with PagerFrag
 }
 
 object LoadingFragment {
+  final val KEY_POSITION = "__POSITION"
+
+  def apply(position: Int): LoadingFragment = {
+    val frag = new LoadingFragment()
+    val b = new Bundle()
+    b.putInt(ThingFragment.KEY_POSITION, position)
+    frag.setArguments(b)
+    frag
+  }
 }
