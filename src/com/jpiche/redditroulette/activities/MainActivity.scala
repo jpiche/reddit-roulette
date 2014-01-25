@@ -187,7 +187,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     allowNsfwPref = prefs.allowNsfw
 
     frags ++= Seq(HomeFragment(), LoadingFragment(1))
-    next(1)
 
     viewPager setAdapter viewPagerAdapter
     viewPager setOnPageChangeListener viewPagerListener
@@ -235,7 +234,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         viewPagerAdapter.notifyDataSetChanged()
       }
       futures.clear()
-      next(1)
     }
   }
 
