@@ -8,18 +8,9 @@ import com.jpiche.redditroulette.{FragTag, TR}
 import com.jpiche.redditroulette.reddit.Thing
 import android.util.Log
 
-final case class WebFragment() extends ThingFragment {
 
-  private lazy val webViewClient = new WebViewClient {
-    override def onPageFinished(view: WebView, url: String) {
-      val view = getView
-      if (view != null) {
-        val prog = view findView TR.progressLayout
-        prog setVisibility View.GONE
-      }
-    }
-  }
-  private lazy val webChromeClient = new WebChromeClient
+final case class WebFragment() extends ThingFragment {
+  import WebFragment.{apply => _, _}
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
@@ -54,7 +45,7 @@ final case class WebFragment() extends ThingFragment {
 
     web loadUrl {
       if (savedInstanceState == null) thing.get.url
-      else savedInstanceState.getString(WebFragment.URL_KEY, thing.get.url)
+      else savedInstanceState.getString(URL_KEY, thing.get.url)
     }
 
     v
@@ -64,7 +55,7 @@ final case class WebFragment() extends ThingFragment {
     super.onSaveInstanceState(outState)
     if (getView != null) {
       val web = getView.findView(TR.web)
-      outState.putString(WebFragment.URL_KEY, web.getUrl)
+      outState.putString(URL_KEY, web.getUrl)
     }
   }
 
@@ -73,6 +64,19 @@ final case class WebFragment() extends ThingFragment {
 
 object WebFragment extends FragTag {
   private final val URL_KEY = "URL_KEY"
+
+  private lazy val webViewClient = new WebViewClient {
+    override def onPageFinished(view: WebView, url: String) {
+      view.getParent match {
+        case x: ViewGroup =>
+          val prog = x findView TR.progressLayout
+          prog setVisibility View.GONE
+        case _ =>
+      }
+    }
+  }
+  private lazy val webChromeClient = new WebChromeClient
+
 
   def apply(p: Int, thing: Thing): WebFragment = {
     val frag = new WebFragment()

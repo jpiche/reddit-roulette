@@ -98,6 +98,7 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
                 notifyChange()
                 dialog.dismiss()
             }
+            prefs.updatedSubreddits()
           }
         })
         builder.setNegativeButton(R.string.dialog_cancel, new OnClickListener {
@@ -125,6 +126,7 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
         def onClick(dialog: DialogInterface, which: Int) {
           db.deleteSub(id) onComplete {
             case _ =>
+              prefs.updatedSubreddits()
               handler.post(new Runnable {
                 def run() {
                   parent.getAdapter match {

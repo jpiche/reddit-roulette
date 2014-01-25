@@ -53,6 +53,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   private val frags = mutable.ArrayBuffer.empty[Fragment]
   private var lastClear: Long = DateTime.now.getMillis
+  private val futures = mutable.HashMap.empty[Int, Future[ThingData]]
 
 
   private val homeListener = new HomeFragment.Listener {
@@ -67,8 +68,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   private val nsfwListener = new NsfwDialogListener {
     override def onDismiss() {
-      next(1)
-      return
+      allowNsfwPref = prefs.allowNsfw
     }
   }
 
@@ -82,15 +82,19 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
       Log.d(LOG_TAG, s"onPageSelected ($p) with loading count ($count); frags(p): ${frags(p)}")
 
-      val size = frags.size
-      if (p > 0 && count <= 2 && p == size - 1) {
-        run {
-          frags += LoadingFragment(size - 1)
-          viewPagerAdapter.notifyDataSetChanged()
-          next(size - 1)
+      if (p > 0
+        && p == frags.size - 1
+        && futures.get(p).isEmpty
+      ) {
+        if (count <= 2) {
+          run {
+            frags += LoadingFragment(p)
+            viewPagerAdapter.notifyDataSetChanged()
+            next(p)
+          }
+        } else {
+          toast(R.string.load_too_many)
         }
-      } else if (count > 2 && p == size - 1) {
-        // too many, wait
       }
 
       frags(p) match {
@@ -174,26 +178,16 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.main)
 
-    val start = if (savedInstanceState == null) {
-      if (prefs contains Prefs.PREF_NSFW) {
-        true
-      } else {
-        NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
-        false
-      }
-    } else {
-      true
+    if (savedInstanceState == null
+      && (prefs contains Prefs.PREF_NSFW)
+    ) {
+      NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
     }
 
     allowNsfwPref = prefs.allowNsfw
 
     frags ++= Seq(HomeFragment(), LoadingFragment(1))
-
-    if (start) {
-      // On first launch, the NSFW dialog will show, in which case, we don't
-      // want to start pre-fetching until a NSFW pref is chosen.
-      next(1)
-    }
+    next(1)
 
     viewPager setAdapter viewPagerAdapter
     viewPager setOnPageChangeListener viewPagerListener
@@ -209,11 +203,11 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       allowNsfwPref = newNsfw
     }
 
-    // reset time so any pending futures get zombied, forcing all prefs to be re-read
-    lastClear = DateTime.now.getMillis
-    val s = frags.size - 1
-    if (viewPager.getCurrentItem == s) {
-      next(s)
+    if (prefs.allowNsfw != allowNsfwPref
+      || prefs.lastSubredditUpdate > lastClear
+    ) {
+      lastClear = DateTime.now.getMillis
+      clearFrags()
     }
 
     db.subCache = None
@@ -240,6 +234,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         frags += LoadingFragment(1)
         viewPagerAdapter.notifyDataSetChanged()
       }
+      futures.clear()
       next(1)
     }
   }
@@ -298,7 +293,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private def nextThing: Future[ThingData] = {
     val p = promise[ThingData]()
 
-    val sub = db.nextSub(prefs.allowNsfw, lastSub)
+    val sub = db.nextSub(allowNsfwPref, lastSub)
     sub.next onComplete {
       case Success((web: WebData, thing: Thing)) =>
 
@@ -392,12 +387,21 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       return
     }
 
-    val f = nextThing
+    val ff = futures get p
+    if (ff.isDefined && ! ff.get.isCompleted) {
+      return
+    }
+
+    val fut = nextThing
+    futures.put(p, fut)
     val time = DateTime.now.getMillis
 
     def x(f: Fragment, thing: Thing) {
       // If cleared after this fragment was requested, just drop it
-      if (lastClear > time) return
+      if (lastClear > time
+        || futures.get(p).isEmpty
+        || futures.get(p).get != fut
+      ) return
 
       replaceFrag(p, f)
       if (viewPager.getCurrentItem == p) {
@@ -407,18 +411,19 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       }
     }
 
-    f onComplete {
+    fut onComplete {
       case Success(ThingBitmapData(webData: WebData, thing: Thing)) =>
-//        Log.d(LOG_TAG, s"Success with ThingBitmapData: $thing")
         val f = ImageFragment(p, thing, webData)
         x(f, thing)
+        futures.remove(p)
 
       case Success(ThingWebData(_, thing: Thing)) =>
-//        Log.d(LOG_TAG, s"Success with ThingWebData: $thing")
         val f = WebFragment(p, thing)
         x(f, thing)
+        futures.remove(p)
 
       case Failure(e) =>
+        futures.remove(p)
         Log.i(LOG_TAG, s"Failure in next(): $e")
     }
   }

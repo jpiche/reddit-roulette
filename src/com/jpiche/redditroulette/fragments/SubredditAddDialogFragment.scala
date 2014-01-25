@@ -72,6 +72,7 @@ final case class SubredditAddDialogFragment() extends DialogFragment with BaseFr
               }
             })
         }
+        prefs.updatedSubreddits()
       }
     })
 
