@@ -17,9 +17,7 @@ sealed trait Web {
 
 object Web extends LogTag {
 
-  private class WebImpl
-
-  private final val BUFFER_SIZE = 0x1000
+  private final val BUFFER_SIZE = 0x4000
 
   private lazy val client = new OkHttpClient
 
@@ -37,25 +35,17 @@ object Web extends LogTag {
     conn.setRequestMethod(method)
 
     val status = conn.getResponseCode
-//    val headers = conn.getHeaderFields
-//    Log.d(LOG_TAG, s"header fields for url (${url.toString}}): ${headers.toString}")
 
     if (status >= 400) {
       conn.disconnect()
       WebFail(conn)
 
     } else {
-//      val contentType = ContentType(conn)
       val in = conn.getInputStream
       try {
 
-//        if (contentType.isImage) {
           val (resp, hash) = readFullAndHash(in)
           WebData(conn, resp, Some(hash))
-//        } else {
-//          val resp = readFull(in)
-//          WebData(conn, resp)
-//        }
 
       } finally {
         in.close()
@@ -83,20 +73,20 @@ object Web extends LogTag {
     Log.d(LOG_TAG, s"hash for byte array: $hash")
     (out.toByteArray, hash)
   }
-//
-//  private def readFull(in: InputStream): Array[Byte] = {
-//    val out = new ByteArrayOutputStream(BUFFER_SIZE)
-//    val buffer = new Array[Byte](BUFFER_SIZE)
-//
-//    @tailrec
-//    def read() {
-//      val count = in.read(buffer)
-//      if (count != -1) {
-//        out.write(buffer, 0, count)
-//        read()
-//      }
-//    }
-//    read()
-//    out.toByteArray
-//  }
+
+  def unescape(text:String) = {
+    @tailrec def un(textList: List[Char], acc: String, escapeFlag: Boolean): String =
+      textList match {
+        case Nil => acc
+        case '&'::tail => un(tail,acc,true)
+        case ';'::tail if escapeFlag => un(tail,acc,false)
+        case 'a'::'m'::'p'::tail if escapeFlag => un(tail,acc+"&",true)
+        case 'q'::'u'::'o'::'t'::tail if escapeFlag => un(tail,acc+"\"",true)
+        case 'l'::'t'::tail if escapeFlag => un(tail,acc+"<",true)
+        case 'g'::'t'::tail if escapeFlag => un(tail,acc+">",true)
+        case x::tail => un(tail,acc+x,true)
+        case _ => acc
+      }
+    un(text.toList,"",false)
+  }
 }

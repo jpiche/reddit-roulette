@@ -6,6 +6,8 @@ import android.text.{Html, Spanned}
 import org.joda.time.{DateTimeZone, Duration, DateTime}
 import com.jpiche.redditroulette.LogTag
 import android.util.Log
+import com.jpiche.redditroulette.net.Web.unescape
+
 
 case class ThingItem(kind: String, data: Thing)
 object ThingItem {
@@ -25,7 +27,7 @@ case class Thing(
   permalink: String,
   name: String,
   url: String,
-  title: String,
+  rawTitle: String,
   created: Long,
   ups: Int,
   comments: Int,
@@ -67,6 +69,7 @@ case class Thing(
   val r_sub = s"/r/$subreddit"
   val full_permalink = s"http://www.reddit.com$permalink"
   val scoreInfo = s"$score ($ups Up, $downs Down)"
+  val title = unescape(rawTitle)
 
   lazy val toBundle = {
     val b = new Bundle(1)
