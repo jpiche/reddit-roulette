@@ -1,6 +1,7 @@
 package com.jpiche.redditroulette.activities
 
 import scalaz._, Scalaz._
+import scalaz.std.boolean.unless
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, promise}
@@ -178,9 +179,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.main)
 
-    if (savedInstanceState == null
-      && (prefs contains Prefs.PREF_NSFW)
-    ) {
+    unless (prefs contains Prefs.PREF_NSFW) {
       NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
     }
 
@@ -367,10 +366,17 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   }
 
   private def replaceFrag(p: Int, f: Fragment) {
-    if (p >= 0 && p < frags.size) {
+    if (p >= 0
+      && p < frags.size
+    ) {
       run {
-        frags.update(p, f)
-        viewPagerAdapter.notifyDataSetChanged()
+        try {
+          frags.update(p, f)
+          viewPagerAdapter.notifyDataSetChanged()
+        } catch {
+          case e: IllegalStateException =>
+            // ignore it and move on
+        }
       }
     }
   }

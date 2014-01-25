@@ -4,7 +4,6 @@ import android.app.{Dialog, AlertDialog, DialogFragment}
 import android.os.Bundle
 import com.jpiche.redditroulette._
 import android.content.DialogInterface
-import android.content.DialogInterface.OnDismissListener
 
 
 final case class NsfwDialogFragment() extends DialogFragment with BaseFrag {
@@ -35,6 +34,8 @@ final case class NsfwDialogFragment() extends DialogFragment with BaseFrag {
         return
       }
     })
+
+    setCancelable(false)
     builder.setCancelable(false)
     builder.create()
   }
