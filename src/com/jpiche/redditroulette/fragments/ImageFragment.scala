@@ -7,11 +7,10 @@ import scala.util.{Failure, Success}
 
 import android.view.{LayoutInflater, ViewGroup, View}
 import android.os.Bundle
-import android.util.Log
 import android.graphics.{Movie, Bitmap}
 
 import com.jpiche.redditroulette.TypedResource._
-import com.jpiche.redditroulette.{R, TR, FragTag, LogTag}
+import com.jpiche.redditroulette.{R, TR}
 import com.jpiche.redditroulette.reddit.Thing
 import com.jpiche.redditroulette.net.BitmapData
 import com.jpiche.redditroulette.views.GIFView
@@ -40,7 +39,7 @@ final case class ImageFragment() extends ThingFragment {
     }
 
     if (data.isEmpty) {
-      Log.w(LOG_TAG, s"Data is empty in position ($position) with thing $thing")
+      warn(s"Data is empty in position ($position) with thing $thing")
       listener map { _.onError(position, thing) }
       return
     }
@@ -114,8 +113,8 @@ final case class ImageFragment() extends ThingFragment {
 
         // Out of memory error should be caught here
         case Failure(e) =>
-          Log.w(LOG_TAG, s"Error loading image in position ($position) from thing: $thing")
-          Log.w(LOG_TAG, e)
+          warn(s"Error loading image in position ($position) from thing: $thing")
+          warn(e.toString)
           listener map { _.onError(position, thing) }
       }
     }
@@ -124,7 +123,7 @@ final case class ImageFragment() extends ThingFragment {
   }
 }
 
-object ImageFragment extends FragTag with LogTag {
+object ImageFragment {
   private final val KEY_DATA = "__DATA"
   private final val KEY_GIF = "__GIF"
 

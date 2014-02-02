@@ -8,6 +8,7 @@ import android.net.Uri
 import com.jpiche.redditroulette.reddit.Thing
 import android.app.Fragment
 
+
 abstract class ThingFragment extends Fragment with BaseFrag with PagerFrag {
 
   var thing: Option[Thing] = None

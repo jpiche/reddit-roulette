@@ -10,7 +10,6 @@ import android.util.Log
 
 final case class HomeFragment() extends Fragment
     with BaseFrag
-    with LogTag
     with OnClickListener {
 
   // this is a var instead of a case class argument because Android requires
@@ -49,7 +48,7 @@ final case class HomeFragment() extends Fragment
         listener map { _.clickedGo() }
 
       case TR.what.id =>
-        Log.d(LOG_TAG, "`what is this` clicked")
+        debug("`what is this` clicked")
         AboutDialogFragment().show(getFragmentManager, AboutDialogFragment.FRAG_TAG)
     }
     return
@@ -71,8 +70,7 @@ final case class HomeFragment() extends Fragment
 //  }
 }
 
-object HomeFragment extends FragTag {
-
+object HomeFragment {
   trait Listener {
     def clickedGo(): Unit
   }

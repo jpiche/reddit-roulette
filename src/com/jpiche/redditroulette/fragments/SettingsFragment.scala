@@ -27,7 +27,7 @@ final case class SettingsFragment() extends PreferenceFragment with BaseFrag wit
   }
 
   override def onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String) {
-    Log.d(LOG_TAG, "pref <%s> changed" format key)
+    debug("pref <%s> changed" format key)
     return
   }
 }

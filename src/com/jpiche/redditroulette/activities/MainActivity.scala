@@ -27,8 +27,9 @@ import com.google.analytics.tracking.android.EasyTracker
 import org.joda.time.DateTime
 import com.jpiche.redditroulette.views.ZoomOutPageTransformer
 import java.io.{FileOutputStream, File}
-import com.jpiche.hermes.{HermesFail, Hermes, HermesSuccess}
+import com.jpiche.hermes.{HermesRequest, HermesFail, Hermes, HermesSuccess}
 import com.squareup.okhttp.internal.Base64
+import android.widget.Toast
 
 
 final class MainActivity extends Activity with BaseAct with TypedViewHolder {
@@ -125,18 +126,22 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
     def saveThing(thing: Thing) {
       if (prefs.isLoggedIn) {
-        val url = "https://ssl.reddit.com/api/save"
+        val url = "https://oauth.reddit.com/api/save"
+        val params = Map(
+          "id" -> thing.name,
+          "grant_type" -> "authorization_code"
+        )
+        val get = HermesRequest.post(url.toString, params)
+        val req = get.addHeader(("Authorization", s"Bearer ${prefs.accessToken}"))
 
-        Hermes.post(url, Map(
-          "access_token" -> prefs.accessToken,
-          "id" -> thing.name
-        )) onComplete {
+        Hermes.http(req) onComplete {
           case Success(web@HermesSuccess(_, _)) =>
-            Log.i(LOG_TAG, s"https://ssl.reddit.com/api/save worked! ${web.toString}")
-          case Success(HermesFail(conn)) =>
-            Log.e(LOG_TAG, s"https://ssl.reddit.com/api/save error: ${conn.getContent}")
+            debug(s"$url worked! (status ${web.status}): ${web.asString}")
+            toast("Post saved", Toast.LENGTH_SHORT)
+          case Success(fail@HermesFail(conn)) =>
+            warn(s"$url error (status ${fail.status}): ${conn.getContent}")
           case Failure(e) =>
-            Log.e(LOG_TAG, s"https://ssl.reddit.com/api/save error: $e")
+            warn(s"$url error: $e")
         }
       } else {
         toast("Not logged in. Try logging in first.")
@@ -149,11 +154,11 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     def onError(position: Int, thing: Option[Thing]) {
       thing match {
         case Some(t) =>
-          Log.w(LOG_TAG, "Retrying URL with WebFragment: %s" format t.url)
+          warn("Retrying URL with WebFragment: %s" format t.url)
           replaceFrag(position, WebFragment(position, t))
 
         case None =>
-          Log.w(LOG_TAG, "Thing is empty")
+          warn("Thing is empty")
           toast(R.string.url_load_error)
       }
     }
@@ -270,13 +275,13 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
       // TODO: Finish login code so that this can work
       case R.id.login =>
-        Log.i(LOG_TAG, "login clicked")
+        debug("login clicked")
         val i = new Intent(this, classOf[LoginActivity])
         startActivity(i)
         true
 
       case R.id.logout =>
-        Log.i(LOG_TAG, "logout clicked")
+        debug("logout clicked")
         true
 
       case _ => super.onOptionsItemSelected(item)
@@ -343,7 +348,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
                 p success fallback
 
               case Failure(e) =>
-                Log.e(LOG_TAG, s"api exception loading url (${thing.goodUrl}: $e")
+                warn(s"api exception loading url (${thing.goodUrl}: $e")
                 p success fallback
             }
           } else {
@@ -353,7 +358,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         }
 
       case Failure(e) =>
-        Log.e(LOG_TAG, s"api exception: $e")
+        warn(s"api exception: $e")
         p failure e
     }
     p.future
@@ -370,7 +375,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private def needsSkip(thing: Thing): Boolean = {
     try {
       if (db.shouldSkipThing(thing.id, 40)) {
-        Log.w(LOG_TAG, s"skipping!! thing: $thing")
+        warn(s"skipping!! thing: $thing")
         true
       } else {
         db add thing
@@ -378,7 +383,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       }
     } catch {
       case e: IllegalStateException =>
-        Log.w(LOG_TAG, s"IllegalStateException when calling findThingVisited: $e")
+        warn(s"IllegalStateException when calling findThingVisited: $e")
         false
     }
   }
@@ -446,7 +451,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
       case Failure(e) =>
         futures.remove(p)
-        Log.i(LOG_TAG, s"Failure in next(): $e")
+        debug(s"Failure in next(): $e")
     }
   }
 
@@ -458,7 +463,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   // ------
 
-  private trait ThingPagerAdapter extends FragmentStatePagerAdapter with LogTag {
+  private trait ThingPagerAdapter extends FragmentStatePagerAdapter {
 
     override def getCount: Int = frags.size
     override def getItem(p: Int): Fragment = frags(p)

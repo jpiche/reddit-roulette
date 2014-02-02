@@ -20,7 +20,7 @@ final class Prefs(val shared: SharedPreferences) {
   def refreshToken = shared.getString(REDDIT_REFRESH_TOKEN, "")
   def refreshToken(token: String) = shared.edit().putString(REDDIT_REFRESH_TOKEN, token).commit()
 
-  def isLoggedIn = accessToken == ""
+  def isLoggedIn = accessToken != ""
 }
 
 object Prefs {

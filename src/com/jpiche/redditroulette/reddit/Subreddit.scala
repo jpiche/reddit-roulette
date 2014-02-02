@@ -5,7 +5,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, promise, future}
 import scala.util.Random
 import com.jpiche.redditroulette._
-import android.util.Log
 import scala.collection.mutable
 import com.jpiche.hermes._
 import scala.util.Failure
@@ -59,7 +58,7 @@ case class Subreddit(
     }
 }
 
-object Subreddit extends LogTag {
+object Subreddit {
 
   private val listCache = mutable.HashMap.empty[String, (HermesSuccess, Listing)]
   private val listCacheInc = mutable.HashMap.empty[String, Int]
@@ -128,7 +127,6 @@ object Subreddit extends LogTag {
       children(i).data
     }
 
-    Log.d(LOG_TAG, "collecting thing with url: %s" format t.url)
     t
   }
 }

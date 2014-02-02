@@ -114,7 +114,7 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
     }
 
   override def onItemClick(parent: AdapterView[_], view: View, position: Int, id: Long) {
-    Log.i(LOG_TAG, s"onItemClick: (position: $position, id: $id)")
+    debug(s"onItemClick: (position: $position, id: $id)")
 
     db.findSub(id) map { s =>
       val builder = new AlertDialog.Builder(thisContext)

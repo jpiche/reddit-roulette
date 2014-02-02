@@ -5,6 +5,7 @@ import android.opengl.GLES20
 import android.graphics.{BitmapFactory, Bitmap}
 import android.util.Log
 
+
 final case class BitmapData(data: Array[Byte]) extends WebBitmap {
   lazy val toBitmap: Option[Bitmap] = toBitmap(data)
 }

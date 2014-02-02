@@ -14,15 +14,11 @@
     <item android:id="@+id/login"
           android:title="@string/menu_login"
           android:showAsAction="never"
-          android:enabled="false"
-          android:visible="false"
           />
 
     <item android:id="@+id/logout"
           android:title="@string/menu_logout"
           android:showAsAction="never"
-          android:enabled="false"
-          android:visible="false"
           />
 
 </menu>

@@ -4,8 +4,9 @@ import argonaut._, Argonaut._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import com.jpiche.redditroulette.RouletteApp
-import com.netaporter.uri.dsl._
+import android.util.Log
 import com.jpiche.hermes.{HermesFail, HermesSuccess, Hermes, HermesSettings}
+
 
 final case class AccessToken(
   accessToken: String,
@@ -27,15 +28,16 @@ object AccessToken {
       "grant_type" -> "authorization_code",
       "response_type" -> "code"
     )
-    val uri = accessTokenUrl
-    uri.withUser(RouletteApp.REDDIT_CLIENTID)
-    uri.withPassword(RouletteApp.REDDIT_SECRET)
 
-    Hermes.post(uri.toString, params) collect {
+    val auth = (RouletteApp.REDDIT_CLIENTID, RouletteApp.REDDIT_SECRET)
+
+    Hermes.post(accessTokenUrl, params, auth) collect {
       case web: HermesSuccess =>
+        Log.d("AccessToken", s"access token response: ${web.asString}")
         web.asString.decodeOption[AccessToken]
 
       case fail: HermesFail =>
+        Log.d("AccessToken", s"access token response (code ${fail.status}): $fail")
         None
     }
   }

@@ -1,14 +1,17 @@
 package com.jpiche.redditroulette
 
 import android.content.Context
-import android.os.{Looper, Message, Handler}
-import android.os.Handler.Callback
+import android.os.{Looper, Handler}
 import android.widget.Toast
 import android.app.{FragmentManager, Activity, Fragment}
 import com.jpiche.hermes.HermesSettings
+import android.util.Log
+import android.content.pm.ApplicationInfo
 
 
-sealed trait Base extends LogTag {
+sealed trait Base { self =>
+
+  protected val LOG_TAG = self.getClass.getSimpleName
 
   // abstract; needs to be implemented for `Activity` and `Fragment` separately
   protected val thisContext: Context
@@ -17,23 +20,19 @@ sealed trait Base extends LogTag {
   protected def manager: FragmentManager
   protected implicit lazy val db: Db = Db(thisContext)
 
-  private lazy val toastHandler = new Handler(thisContext.getMainLooper, new Callback {
-    def handleMessage(msg: Message): Boolean = {
-      if (msg.obj != null && msg.obj.isInstanceOf[String])
-          Toast.makeText(thisContext, msg.obj.asInstanceOf[String], Toast.LENGTH_LONG).show()
-      else
-          Toast.makeText(thisContext, msg.what, Toast.LENGTH_LONG).show()
-      false
-    }
-  })
 
-  protected def toast(text: String) {
-    Message.obtain(toastHandler, 0, text).sendToTarget()
+  protected def toast(text: String): Unit = toast(text, Toast.LENGTH_LONG)
+  protected def toast(text: String, duration: Int) {
+    run {
+      Toast.makeText(thisContext, text, duration).show()
+    }
   }
 
-  protected def toast(text: Int) {
-    toastHandler.sendEmptyMessage(text)
-    return
+  protected def toast(text: Int): Unit = toast(text, Toast.LENGTH_LONG)
+  protected def toast(text: Int, duration: Int) {
+    run {
+      Toast.makeText(thisContext, text, duration).show()
+    }
   }
 
   protected implicit def prefs = Prefs(thisContext)
@@ -46,6 +45,20 @@ sealed trait Base extends LogTag {
         return
       }
     })
+    return
+  }
+
+  private lazy val isDebuggable = 0 != (thisContext.getApplicationInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE)
+
+  protected def debug(msg: => String) {
+    if (isDebuggable)
+      Log.d(LOG_TAG, msg)
+    return
+  }
+
+  protected def warn(msg: => String) {
+    if (isDebuggable)
+      Log.w(LOG_TAG, msg)
     return
   }
 }
@@ -66,9 +79,6 @@ trait BaseFrag extends Base { this: Fragment =>
   protected implicit val thisHandler = new Handler(Looper.getMainLooper)
 }
 
-trait LogTag {
-  protected val LOG_TAG = getClass.getSimpleName
-}
 
 trait FragTag {
   val FRAG_TAG = getClass.getName

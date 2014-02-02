@@ -1,20 +1,15 @@
 package com.jpiche.redditroulette
 
 import android.app.Application
-import android.util.Log
 
-final class RouletteApp extends Application with LogTag {
+final class RouletteApp extends Application {
 
   override def onCreate() {
     super.onCreate()
-
-
   }
 
   override def onLowMemory() {
     super.onLowMemory()
-
-    Log.w(LOG_TAG, "onLowMemory!")
     return
   }
 }

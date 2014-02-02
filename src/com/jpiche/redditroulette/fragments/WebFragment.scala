@@ -25,7 +25,7 @@ final case class WebFragment() extends ThingFragment {
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
     if (thing.isEmpty) {
-      Log.w(LOG_TAG, "Thing is empty")
+      warn("Thing is empty")
       listener map { _.onError(position, thing) }
       return null
     }

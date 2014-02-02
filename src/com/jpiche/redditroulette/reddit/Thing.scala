@@ -4,7 +4,6 @@ import argonaut._, Argonaut._
 import android.os.Bundle
 import android.text.{Html, Spanned}
 import org.joda.time.{DateTimeZone, Duration, DateTime}
-import com.jpiche.redditroulette.LogTag
 import android.util.{Base64, Log}
 
 
@@ -31,7 +30,7 @@ case class Thing(
   ups: Int,
   comments: Int,
   visited: Boolean
-) extends LogTag {
+) {
   val isImg: Boolean = {
     val imgurAlbum = """imgur\.com/a/[a-zA-Z0-9]+$""".r.unanchored
 
@@ -85,8 +84,6 @@ case class Thing(
     val days = dur.getStandardDays
     val hours = dur.getStandardHours
     val mins = dur.getStandardMinutes
-
-    Log.i(LOG_TAG, s"Duration from (created: $created, now: $now): $days d, $hours h, $mins m")
 
     val dayWord = if (days == 0) "day" else "days"
     val hourWord = if (hours == 0) "hour" else "hours"
