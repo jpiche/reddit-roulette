@@ -4,7 +4,7 @@ import android.app.Fragment
 import android.view.{View, ViewGroup, LayoutInflater}
 import android.os.Bundle
 
-import com.jpiche.redditroulette.{TR, BaseFrag}
+import com.jpiche.redditroulette.{R, TR, BaseFrag}
 import com.jpiche.redditroulette.TypedResource._
 
 
@@ -25,10 +25,33 @@ final case class LoadingFragment() extends Fragment with BaseFrag with PagerFrag
     val attachToRoot = false
     val v = inflater.inflate(TR.layout.fragment_loading, container, attachToRoot)
 
-    val prog = v findView TR.progressLayout
-    prog setVisibility View.VISIBLE
+    val progLayout = v findView TR.progressLayout
+    progLayout setVisibility View.VISIBLE
+
+    val prog = v findView TR.progress
+    prog.setMax(100)
 
     v
+  }
+
+  def setLoadingText(resId: Int) {
+    run {
+      val view = getView
+      if (view != null) {
+        val loadingText = view findView TR.loadingText
+        loadingText.setText(resId)
+      }
+    }
+  }
+
+  def setProgress(x: Int) {
+    run {
+      val view = getView
+      if (view != null) {
+        val prog = view findView TR.progress
+        prog.setProgress(x)
+      }
+    }
   }
 }
 

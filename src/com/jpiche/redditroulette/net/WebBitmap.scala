@@ -16,7 +16,7 @@ trait WebBitmap { self =>
   private val LOG_TAG = self.getClass.getSimpleName
 
   protected def toBitmap(data: Array[Byte]): Option[Bitmap] = {
-    import WebBitmap._
+    import WebBitmap.OPENGL_MAX
 
     val bmp = BitmapFactory.decodeByteArray(data, 0, data.length)
     if (bmp == null) {

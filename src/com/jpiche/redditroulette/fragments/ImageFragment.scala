@@ -2,7 +2,7 @@ package com.jpiche.redditroulette.fragments
 
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Promise, promise, future}
+import scala.concurrent.{Future, promise, future}
 import scala.util.{Failure, Success}
 
 import android.view.{LayoutInflater, ViewGroup, View}
@@ -13,14 +13,15 @@ import android.graphics.{Movie, Bitmap}
 import com.jpiche.redditroulette.TypedResource._
 import com.jpiche.redditroulette.{R, TR, FragTag, LogTag}
 import com.jpiche.redditroulette.reddit.Thing
-import com.jpiche.redditroulette.net.{BitmapData, WebData}
+import com.jpiche.redditroulette.net.BitmapData
 import com.jpiche.redditroulette.views.GIFView
+import com.jpiche.hermes.HermesSuccess
 
 
 final case class ImageFragment() extends ThingFragment {
 
   private var data: Option[Array[Byte]] = None
-  private var pData: Option[Promise[Either[Bitmap,Movie]]] = None
+  private var pData: Option[Future[Either[Bitmap,Movie]]] = None
   private var endData: Option[Either[Bitmap,Movie]] = None
   private var isGif = false
 
@@ -49,31 +50,32 @@ final case class ImageFragment() extends ThingFragment {
     pData match {
       case Some(_) =>
       case None =>
-        val p = promise[Either[Bitmap,Movie]]() completeWith {
-          future {
-            if (isGif) {
-              val m = Movie.decodeByteArray(d, 0, d.length)
-              if (m.duration() < 1) {
-                throw new RuntimeException("Invalid GIF")
-              } else {
-                Right(m)
-              }
+        val p = promise[Either[Bitmap,Movie]]()
+
+        future {
+          if (isGif) {
+            val m = Movie.decodeByteArray(d, 0, d.length)
+            if (m.duration() < 1) {
+              val e = new RuntimeException("Invalid GIF")
+              p failure e
             } else {
-              try {
-                val web = BitmapData(d)
-                web.toBitmap match {
-                  case Some(x) => Left(x)
-                  case None => throw new Exception
-                }
-              } catch {
-                case oom: OutOfMemoryError =>
-                  Log.w(LOG_TAG, s"OutOfMemoryError with thing $thing")
-                  throw oom
+              p success Right(m)
+            }
+          } else {
+            try {
+              val web = BitmapData(d)
+              web.toBitmap match {
+                case Some(x) => p.success(Left(x))
+                case None => p.failure(new RuntimeException) // ??
               }
+            } catch {
+              case oom: OutOfMemoryError =>
+                p failure oom
             }
           }
         }
-        pData = Some(p)
+
+        pData = Some(p.future)
     }
     return
   }
@@ -91,7 +93,7 @@ final case class ImageFragment() extends ThingFragment {
     loadText setText R.string.loading_image
 
     pData map {
-      _.future onComplete {
+      _ onComplete {
         case Success(Left(bmp)) =>
           run {
             img setImageBitmap bmp
@@ -110,6 +112,7 @@ final case class ImageFragment() extends ThingFragment {
           }
           endData = Some(Right(gif))
 
+        // Out of memory error should be caught here
         case Failure(e) =>
           Log.w(LOG_TAG, s"Error loading image in position ($position) from thing: $thing")
           Log.w(LOG_TAG, e)
@@ -125,7 +128,7 @@ object ImageFragment extends FragTag with LogTag {
   private final val KEY_DATA = "__DATA"
   private final val KEY_GIF = "__GIF"
 
-  def apply(position: Int, thing: Thing, web: WebData): ImageFragment = {
+  def apply(position: Int, thing: Thing, web: HermesSuccess): ImageFragment = {
 
     val frag = new ImageFragment()
 

@@ -7,7 +7,11 @@
     <string name="go_btn">Play Reddit Roulette</string>
     <string name="what_is_this"><u>What is this?</u></string>
     <string name="loading">Loading&#8230;</string>
-    <string name="loading_image">Processing Image&#8230;</string>
+    <string name="loading_image">Processing image&#8230;</string>
+    <string name="downloading_image">Downloading image&#8230;</string>
+    <string name="loading_web">Loading web data&#8230;</string>
+    <string name="verifying_subreddit">Verifying subreddit&#8230;</string>
+    <string name="finding_next_post">Finding next post&#8230;</string>
 
     <!-- errors / toasts -->
     <string name="image_load_error">Error loading image</string>

@@ -29,6 +29,7 @@
 
         <activity android:name=".activities.SettingsActivity"
                   android:label="@string/menu_settings"
+                  android:parentActivityName="com.jpiche.redditroulette.activities.MainActivity"
                 >
             <intent-filter>
                 <category android:name="android.intent.category.PREFERENCE" />
@@ -37,6 +38,7 @@
 
         <activity android:name=".activities.SubredditListActivity"
                   android:label="@string/pref_subreddits_title"
+                  android:parentActivityName="com.jpiche.redditroulette.activities.SettingsActivity"
                 >
             <intent-filter>
                 <action android:name="com.jpiche.redditroulette.SubredditList" />
@@ -47,6 +49,7 @@
         <activity android:name=".activities.LoginActivity"
                   android:label="@string/menu_login"
                   android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
+                  android:parentActivityName="com.jpiche.redditroulette.activities.MainActivity"
                 >
             <intent-filter>
                 <category android:name="android.intent.category.DEFAULT" />

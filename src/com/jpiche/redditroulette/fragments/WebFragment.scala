@@ -4,7 +4,7 @@ import com.jpiche.redditroulette.TypedResource._
 import android.view.{LayoutInflater, ViewGroup, View}
 import android.os.Bundle
 import android.webkit.{WebView, WebChromeClient, WebViewClient}
-import com.jpiche.redditroulette.{FragTag, TR}
+import com.jpiche.redditroulette.{R, FragTag, TR}
 import com.jpiche.redditroulette.reddit.Thing
 import android.util.Log
 
@@ -35,6 +35,9 @@ final case class WebFragment() extends ThingFragment {
 
     val prog = v findView TR.progressLayout
     prog setVisibility View.VISIBLE
+
+    val loadText = v findView TR.loadingText
+    loadText setText R.string.loading_web
 
     val web = v.findView(TR.web)
     web.getSettings.setJavaScriptEnabled(true)

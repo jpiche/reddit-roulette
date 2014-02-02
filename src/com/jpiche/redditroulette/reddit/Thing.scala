@@ -5,8 +5,7 @@ import android.os.Bundle
 import android.text.{Html, Spanned}
 import org.joda.time.{DateTimeZone, Duration, DateTime}
 import com.jpiche.redditroulette.LogTag
-import android.util.Log
-import com.jpiche.redditroulette.net.Web.unescape
+import android.util.{Base64, Log}
 
 
 case class ThingItem(kind: String, data: Thing)
@@ -66,10 +65,12 @@ case class Thing(
     }
   } else url
 
+  lazy val url64 = Base64.encodeToString(url.getBytes("UTF-8"), Base64.URL_SAFE)
+  val title = Html fromHtml s"<span>$rawTitle</span>"
+
   val r_sub = s"/r/$subreddit"
   val full_permalink = s"http://www.reddit.com$permalink"
   val scoreInfo = s"$score ($ups Up, $downs Down)"
-  val title = unescape(rawTitle)
 
   lazy val toBundle = {
     val b = new Bundle(1)

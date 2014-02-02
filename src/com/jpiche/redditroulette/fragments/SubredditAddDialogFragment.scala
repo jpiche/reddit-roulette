@@ -26,6 +26,8 @@ final case class SubredditAddDialogFragment() extends DialogFragment with BaseFr
     val view = inflater.inflate(R.layout.dialog_sub_add, container, false)
 
     val prog = view findView TR.progressLayout
+    val loadingText = view findView TR.loadingText
+    loadingText.setText(R.string.verifying_subreddit)
 
     val editName = view findView TR.editName
     val input = editName.getText
@@ -54,7 +56,9 @@ final case class SubredditAddDialogFragment() extends DialogFragment with BaseFr
 
         handler.post(new Runnable {
           def run(): Unit = {
+
             prog setVisibility View.VISIBLE
+
             return
           }
         })

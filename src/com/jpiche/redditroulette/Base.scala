@@ -1,12 +1,12 @@
 package com.jpiche.redditroulette
 
 import android.content.Context
-import android.os.{Looper, Build, Message, Handler}
+import android.os.{Looper, Message, Handler}
 import android.os.Handler.Callback
 import android.widget.Toast
 import android.app.{FragmentManager, Activity, Fragment}
-import android.view.{View, Window, WindowManager}
-import com.jpiche.redditroulette.net.WebSettings
+import com.jpiche.hermes.HermesSettings
+
 
 sealed trait Base extends LogTag {
 
@@ -37,7 +37,7 @@ sealed trait Base extends LogTag {
   }
 
   protected implicit def prefs = Prefs(thisContext)
-  protected implicit lazy val webSettings = WebSettings(RouletteApp.USER_AGENT)
+  protected implicit lazy val webSettings = HermesSettings(RouletteApp.USER_AGENT)
 
   protected def run(f: => Any)(implicit handler: Handler): Unit = {
     handler.post(new Runnable {

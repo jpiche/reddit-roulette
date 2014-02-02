@@ -22,29 +22,30 @@ import android.support.v13.app.FragmentStatePagerAdapter
 import com.jpiche.redditroulette.reddit.Thing
 import com.jpiche.redditroulette.fragments._
 import com.jpiche.redditroulette._
-import com.jpiche.redditroulette.net.{Web, WebFail, WebData}
 
 import com.google.analytics.tracking.android.EasyTracker
 import org.joda.time.DateTime
 import com.jpiche.redditroulette.views.ZoomOutPageTransformer
 import java.io.{FileOutputStream, File}
+import com.jpiche.hermes.{HermesFail, Hermes, HermesSuccess}
+import com.squareup.okhttp.internal.Base64
 
 
 final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
   private sealed trait ThingData {
-    val webData: WebData
+    val webData: HermesSuccess
     val thing: Thing
   }
-  private final case class ThingWebData(webData: WebData, thing: Thing) extends ThingData
-  private final case class ThingBitmapData(webData: WebData, thing: Thing) extends ThingData
+  private final case class ThingWebData(webData: HermesSuccess, thing: Thing) extends ThingData
+  private final case class ThingBitmapData(webData: HermesSuccess, thing: Thing) extends ThingData
 
-  private lazy val cacheDir = {
-    val ex = getExternalCacheDir
-    val cache = new File(ex, "img")
-    cache.mkdirs()
-    cache
-  }
+//  private lazy val cacheDir = {
+//    val ex = getExternalCacheDir
+//    val cache = new File(ex, "img")
+//    cache.mkdirs()
+//    cache
+//  }
 
   private lazy val viewPagerAdapter = new FragmentStatePagerAdapter(getFragmentManager) with ThingPagerAdapter
   private lazy val viewPager = findView(TR.viewPager)
@@ -81,7 +82,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         case _ => false
       }
 
-      Log.d(LOG_TAG, s"onPageSelected ($p) with loading count ($count); frags(p): ${frags(p)}")
+//      Log.d(LOG_TAG, s"onPageSelected ($p) with loading count ($count); frags(p): ${frags(p)}")
 
       if (p > 0
         && p == frags.size - 1
@@ -123,13 +124,16 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     }
 
     def saveThing(thing: Thing) {
-      import com.netaporter.uri.dsl._
       if (prefs.isLoggedIn) {
-        val uri = "https://ssl.reddit.com/api/save" ? ("access_token" -> prefs.accessToken) & ("id" -> thing.name)
-        Web.post(uri.toString()) onComplete {
-          case Success(web@WebData(_, _, _)) =>
+        val url = "https://ssl.reddit.com/api/save"
+
+        Hermes.post(url, Map(
+          "access_token" -> prefs.accessToken,
+          "id" -> thing.name
+        )) onComplete {
+          case Success(web@HermesSuccess(_, _)) =>
             Log.i(LOG_TAG, s"https://ssl.reddit.com/api/save worked! ${web.toString}")
-          case Success(WebFail(conn)) =>
+          case Success(HermesFail(conn)) =>
             Log.e(LOG_TAG, s"https://ssl.reddit.com/api/save error: ${conn.getContent}")
           case Failure(e) =>
             Log.e(LOG_TAG, s"https://ssl.reddit.com/api/save error: $e")
@@ -287,37 +291,51 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
    * returns a composite `Future[ThingData]` at the end of the chain, which
    * is a simple sealed collection of case classes for `(WebData, Thing)`.
    */
-  private def nextThing: Future[ThingData] = {
+  private def nextThing(position: Int): Future[ThingData] = {
     val p = promise[ThingData]()
 
     val sub = db.nextSub(allowNsfwPref, lastSub)
+    frags(position) match {
+      case loading: LoadingFragment =>
+        loading.setLoadingText(R.string.finding_next_post)
+      case _ =>
+    }
     sub.next onComplete {
-      case Success((web: WebData, thing: Thing)) =>
+      case Success((web: HermesSuccess, thing: Thing)) =>
 
         // if the post is marked nsfw even though the subreddit is not,
         // and the user has nsfw off, skip it
         if (thing.over18 && ! prefs.allowNsfw) {
-          p completeWith nextThing
+          p completeWith nextThing(position)
 
         // look at the db for distance between this and that last time it was shown
         } else if (needsSkip(thing)) {
-          p completeWith nextThing
+          p completeWith nextThing(position)
 
         // else, it should be safe
         } else {
           val fallback = ThingWebData(web, thing)
           if (thing.isImg && ! thing.likelyGif) {
-            Web.get(thing.goodUrl) onComplete {
-              case Success(webBmp@WebData(_, data, Some(hash))) if ! web.contentType.isGif =>
+            val loading = frags(position) match {
+              case loading: LoadingFragment =>
+                loading.setLoadingText(R.string.downloading_image)
+                loading.some
+              case _ => none
+            }
+            Hermes.get(thing.goodUrl, x => {
+              val p = Math.round(x * 100)
+              loading.map { _.setProgress(p) }
+            }) onComplete {
+              case Success(webBmp@HermesSuccess(_, data)) if ! web.contentType.isGif =>
 
-                val imgFile = new File(cacheDir, hash)
-                if (imgFile.canWrite) {
-                  Log.d(LOG_TAG, s"can write to file path: ${imgFile.getAbsolutePath}")
-                  val writer = new FileOutputStream(imgFile)
-                  writer.write(data, 0, data.length)
-                  writer.flush()
-                  writer.close()
-                }
+//                val imgFile = new File(cacheDir, thing.url64)
+//                if (imgFile.canWrite) {
+//                  Log.d(LOG_TAG, s"can write to file path: ${imgFile.getAbsolutePath}")
+//                  val writer = new FileOutputStream(imgFile)
+//                  writer.write(data, 0, data.length)
+//                  writer.flush()
+//                  writer.close()
+//                }
 
                 p success ThingBitmapData(webBmp, thing)
 
@@ -396,7 +414,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       return
     }
 
-    val fut = nextThing
+    val fut = nextThing(p)
     futures.put(p, fut)
     val time = DateTime.now.getMillis
 
@@ -416,12 +434,12 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     }
 
     fut onComplete {
-      case Success(ThingBitmapData(webData: WebData, thing: Thing)) =>
+      case Success(ThingBitmapData(webData, thing)) =>
         val f = ImageFragment(p, thing, webData)
         x(f, thing)
         futures.remove(p)
 
-      case Success(ThingWebData(_, thing: Thing)) =>
+      case Success(ThingWebData(_, thing)) =>
         val f = WebFragment(p, thing)
         x(f, thing)
         futures.remove(p)

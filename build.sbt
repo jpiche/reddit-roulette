@@ -27,7 +27,8 @@ libraryDependencies ++= Seq(
   "com.squareup.okhttp" % "okhttp" % "1.2.1",
   "io.argonaut" %% "argonaut" % "6.0.1",
   "com.netaporter" %% "scala-uri" % "0.4.1-SNAPSHOT",
-  "com.android.support" % "support-v13" % "19.0.1"
+  "com.android.support" % "support-v13" % "19.0.1",
+  "com.jpiche" %% "hermes" % "0.0.1"
 )
 
 resolvers ++= Seq(
