@@ -20,3 +20,6 @@
 #}
 
 -dontwarn org.joda.convert.**
+-dontwarn org.msgpack.template.**
+-dontwarn org.msgpack.util.**
+
