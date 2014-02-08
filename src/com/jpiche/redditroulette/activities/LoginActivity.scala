@@ -15,6 +15,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Success
 import android.view.View
 
+object LoginActivity {
+  final val LOGIN_REQUEST_CODE = 100
+}
 
 final class LoginActivity extends Activity with BaseAct with TypedViewHolder {
 
@@ -46,11 +49,11 @@ final class LoginActivity extends Activity with BaseAct with TypedViewHolder {
           prefs accessToken access
           prefs refreshToken refresh
 
-          toast("Login successful!")
+          toast(R.string.auth_login_success)
           finish()
 
         case _ =>
-          toast("Error while authenticating. Please try again.")
+          toast(R.string.auth_login_failure)
 
           val s = LoginFragment(loginUrl)
           run {

@@ -36,4 +36,9 @@
           android:enabled="false"
           android:visible="false"
             />
+
+    <item android:id="@+id/setImageAs"
+          android:title="@string/menu_set_image_as"
+          android:showAsAction="never"
+            />
 </menu>

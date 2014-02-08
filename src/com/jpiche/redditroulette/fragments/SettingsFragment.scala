@@ -7,7 +7,9 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.SharedPreferences
 import android.util.Log
 
-final case class SettingsFragment() extends PreferenceFragment with BaseFrag with OnSharedPreferenceChangeListener {
+final case class SettingsFragment() extends PreferenceFragment
+    with BaseFrag
+    with OnSharedPreferenceChangeListener {
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
@@ -28,7 +30,12 @@ final case class SettingsFragment() extends PreferenceFragment with BaseFrag wit
 
   override def onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String) {
     debug("pref <%s> changed" format key)
-    return
+    key match {
+      case "allow_nsfw" =>
+        prefs.didUpdate()
+      case _ =>
+    }
+    ()
   }
 }
 

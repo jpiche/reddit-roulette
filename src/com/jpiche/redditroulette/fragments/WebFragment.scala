@@ -1,12 +1,11 @@
 package com.jpiche.redditroulette.fragments
 
 import com.jpiche.redditroulette.TypedResource._
-import android.view.{LayoutInflater, ViewGroup, View}
+import android.view.{Menu, LayoutInflater, ViewGroup, View}
 import android.os.Bundle
 import android.webkit.{WebView, WebChromeClient, WebViewClient}
 import com.jpiche.redditroulette.{R, FragTag, TR}
 import com.jpiche.redditroulette.reddit.Thing
-import android.util.Log
 
 
 final case class WebFragment() extends ThingFragment {
@@ -60,6 +59,17 @@ final case class WebFragment() extends ThingFragment {
       val web = getView.findView(TR.web)
       outState.putString(URL_KEY, web.getUrl)
     }
+  }
+
+  override def onPrepareOptionsMenu(menu: Menu) {
+    super.onPrepareOptionsMenu(menu)
+
+    val wall = menu.findItem(R.id.setImageAs)
+    if (wall != null) {
+      wall setEnabled false
+      wall setVisible false
+    }
+    ()
   }
 
   def webView = getView.findView(TR.web)

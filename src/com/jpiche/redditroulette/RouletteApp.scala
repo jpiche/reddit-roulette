@@ -24,4 +24,6 @@ private[redditroulette] object RouletteApp {
 
   final val USER_AGENT = "redditroulette/1.0 by jpiche"
   final val CHECKPOINT_PLAY = "CHECKPOINT_PLAY"
+
+  final val STORE_URL = "market://details?id=com.jpiche.redditroulette"
 }

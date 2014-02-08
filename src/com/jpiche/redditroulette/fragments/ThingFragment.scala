@@ -7,12 +7,20 @@ import android.content.Intent
 import android.net.Uri
 import com.jpiche.redditroulette.reddit.Thing
 import android.app.Fragment
+import android.graphics.Bitmap
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
-abstract class ThingFragment extends Fragment with BaseFrag with PagerFrag {
+abstract class ThingFragment extends Fragment
+    with BaseFrag
+    with PagerFrag { self =>
 
   var thing: Option[Thing] = None
   var listener: Option[ThingListener] = None
+
+  private var saved = false
+  private var saveProcess = false
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
@@ -20,9 +28,33 @@ abstract class ThingFragment extends Fragment with BaseFrag with PagerFrag {
     val args = getArguments
     if (args != null) {
       thing = Thing(args)
+      thing map { t=>
+        saved = t.saved
+      }
     }
 
     setHasOptionsMenu(true)
+  }
+
+  override def onPrepareOptionsMenu(menu: Menu) {
+    super.onPrepareOptionsMenu(menu)
+
+    val saveItem = menu.findItem(R.id.save)
+    val unsaveItem = menu.findItem(R.id.unsave)
+
+    if (saveItem != null && unsaveItem != null) {
+      saveItem setEnabled ! saveProcess
+      unsaveItem setEnabled ! saveProcess
+
+      if (saved) {
+        saveItem setVisible false
+        unsaveItem setVisible true
+      } else {
+        saveItem setVisible true
+        unsaveItem setVisible false
+      }
+    }
+    ()
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -49,7 +81,31 @@ abstract class ThingFragment extends Fragment with BaseFrag with PagerFrag {
       case R.id.save =>
         listener map { l =>
           thing map { t =>
-            l.saveThing(t)
+            saveProcess = true
+            manager.invalidateOptionsMenu()
+            l.saveThing(t) onSuccess {
+              case true =>
+                saveProcess = false
+                saved = true
+                manager.invalidateOptionsMenu()
+              case false =>
+            }
+          }
+        }
+        true
+
+      case R.id.unsave =>
+        listener map { l =>
+          thing map { t =>
+            saveProcess = true
+            manager.invalidateOptionsMenu()
+            l.unsaveThing(t) onSuccess {
+              case true =>
+                saveProcess = false
+                saved = false
+                manager.invalidateOptionsMenu()
+              case false =>
+            }
           }
         }
         true
@@ -65,5 +121,7 @@ object ThingFragment {
 trait ThingListener {
   def onError(position: Int, thing: Option[Thing]): Unit
   def onNext(position: Int): Unit
-  def saveThing(thing: Thing): Unit
+  def saveThing(thing: Thing): Future[Boolean]
+  def unsaveThing(thing: Thing): Future[Boolean]
+  def setImageAs(thing: Thing, data: Bitmap): Unit
 }

@@ -3,10 +3,10 @@ package com.jpiche.redditroulette.fragments
 import com.jpiche.redditroulette.TypedResource._
 import android.app.Fragment
 import android.view._
-import android.os.{Handler, Bundle}
+import android.os.Bundle
 import android.view.View.OnClickListener
 import com.jpiche.redditroulette._
-import android.util.Log
+
 
 final case class HomeFragment() extends Fragment
     with BaseFrag
@@ -15,7 +15,6 @@ final case class HomeFragment() extends Fragment
   // this is a var instead of a case class argument because Android requires
   // a public empty constructor
   var listener: Option[HomeFragment.Listener] = None
-  private val handler = new Handler()
 
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
@@ -48,7 +47,6 @@ final case class HomeFragment() extends Fragment
         listener map { _.clickedGo() }
 
       case TR.what.id =>
-        debug("`what is this` clicked")
         AboutDialogFragment().show(getFragmentManager, AboutDialogFragment.FRAG_TAG)
     }
     return
@@ -58,16 +56,6 @@ final case class HomeFragment() extends Fragment
     inflater.inflate(R.menu.main, menu)
     super.onCreateOptionsMenu(menu, inflater)
   }
-
-//  def showBtn() {
-//    val goBtn = getView.findView(TR.go_btn)
-//    handler.post(new Runnable {
-//      def run() {
-//        goBtn.setVisibility(View.VISIBLE)
-//      }
-//    })
-//    return
-//  }
 }
 
 object HomeFragment {

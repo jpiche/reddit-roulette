@@ -2,13 +2,14 @@ package com.jpiche.redditroulette.fragments
 
 import android.app.DialogFragment
 import com.jpiche.redditroulette.{FragTag, TR, R, BaseFrag}
-import android.os.{Handler, Bundle}
+import android.os.Bundle
 import android.view.{View, ViewGroup, LayoutInflater}
 import com.jpiche.redditroulette.TypedResource._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Success
 import android.content.DialogInterface
+
 
 final case class SubredditAddDialogFragment() extends DialogFragment with BaseFrag {
 
@@ -39,44 +40,33 @@ final case class SubredditAddDialogFragment() extends DialogFragment with BaseFr
       }
     })
 
-    val handler = new Handler()
-
     val addBtn = view.findView(TR.addBtn)
     addBtn.setOnClickListener(new View.OnClickListener {
       def onClick(v: View) {
         if (input.length() < 1) {
-          toast("Name is required.")
+          toast(R.string.sub_add_name_req)
           return
         }
 
         if (listener.isEmpty) {
-          toast("Error adding subreddit; please try again")
+          toast(R.string.sub_add_error)
           dismiss()
         }
 
-        handler.post(new Runnable {
-          def run(): Unit = {
-
-            prog setVisibility View.VISIBLE
-
-            return
-          }
-        })
+        run {
+          prog setVisibility View.VISIBLE
+        }
 
         val f = listener.get.addSubreddit(input)
         f onComplete {
           case Success(true) =>
             dismiss()
           case _ =>
-
-            handler.post(new Runnable {
-              def run(): Unit = {
-                prog setVisibility View.GONE
-                return
-              }
-            })
+            run {
+              prog setVisibility View.GONE
+            }
         }
-        prefs.updatedSubreddits()
+        prefs.didUpdate()
       }
     })
 
@@ -91,9 +81,8 @@ final case class SubredditAddDialogFragment() extends DialogFragment with BaseFr
   }
 }
 
-object SubredditAddDialogFragment extends FragTag {
+object SubredditAddDialogFragment extends FragTag
 
-}
 
 trait SubredditAddListener {
   def addSubreddit(name: CharSequence): Future[Boolean]

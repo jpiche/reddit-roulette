@@ -42,10 +42,10 @@ sealed trait Base { self =>
     handler.post(new Runnable {
       def run() {
         f
-        return
+        ()
       }
     })
-    return
+    ()
   }
 
   private lazy val isDebuggable = 0 != (thisContext.getApplicationInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE)
@@ -53,13 +53,13 @@ sealed trait Base { self =>
   protected def debug(msg: => String) {
     if (isDebuggable)
       Log.d(LOG_TAG, msg)
-    return
+    ()
   }
 
   protected def warn(msg: => String) {
     if (isDebuggable)
       Log.w(LOG_TAG, msg)
-    return
+    ()
   }
 }
 

@@ -8,10 +8,10 @@ final class Prefs(val shared: SharedPreferences) {
 
   def allowNsfw = shared.getBoolean(PREF_NSFW, false)
   def showSelf = shared.getBoolean(PREF_SELF, false)
-  def lastSubredditUpdate = shared.getLong(PREF_LAST_SUB_UPDATE, DateTime.now.getMillis)
-  def updatedSubreddits() {
-    shared.edit().putLong(PREF_LAST_SUB_UPDATE, DateTime.now.getMillis).commit()
-    return
+  def lastUpdate = shared.getLong(PREF_LAST_UPDATE, DateTime.now.getMillis)
+  def didUpdate() {
+    shared.edit().putLong(PREF_LAST_UPDATE, DateTime.now.getMillis).commit()
+    ()
   }
 
   def accessToken = shared.getString(REDDIT_ACCESS_TOKEN, "")
@@ -21,13 +21,18 @@ final class Prefs(val shared: SharedPreferences) {
   def refreshToken(token: String) = shared.edit().putString(REDDIT_REFRESH_TOKEN, token).commit()
 
   def isLoggedIn = accessToken != ""
+  def logout() {
+    accessToken("")
+    refreshToken("")
+    ()
+  }
 }
 
 object Prefs {
   final val PREF_NAME = "redditroulette"
   final val PREF_NSFW = "allow_nsfw"
   final val PREF_SELF = "show_self"
-  final val PREF_LAST_SUB_UPDATE = "last_subreddit_update"
+  final val PREF_LAST_UPDATE = "last_update"
 
   final val REDDIT_ACCESS_TOKEN = "reddit_access_token"
   final val REDDIT_REFRESH_TOKEN = "reddit_refresh_token"

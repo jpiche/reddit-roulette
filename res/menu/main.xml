@@ -5,20 +5,31 @@
       tools:context=".activities.MainActivity"
         >
 
-    <item android:id="@+id/settings"
+    <item android:id="@+id/moreMenu"
           android:icon="@android:drawable/ic_menu_preferences"
-          android:title="@string/menu_settings"
-          android:showAsAction="ifRoom"
-            />
+          android:title="@string/menu_actions"
+          android:showAsAction="always"
+          >
+        <menu>
+            <item android:id="@+id/settings"
+                  android:title="@string/menu_settings"
+                  android:showAsAction="never"
+                    />
 
-    <item android:id="@+id/login"
-          android:title="@string/menu_login"
-          android:showAsAction="never"
-          />
+            <item android:id="@+id/login"
+                  android:title="@string/menu_login"
+                  android:showAsAction="never"
+                    />
 
-    <item android:id="@+id/logout"
-          android:title="@string/menu_logout"
-          android:showAsAction="never"
-          />
+            <item android:id="@+id/logout"
+                  android:title="@string/menu_logout"
+                  android:showAsAction="never"
+                    />
 
+            <item android:id="@+id/about"
+                  android:title="@string/about"
+                  android:showAsAction="never"
+                    />
+        </menu>
+    </item>
 </menu>

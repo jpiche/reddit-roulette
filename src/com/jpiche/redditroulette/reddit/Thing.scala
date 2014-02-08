@@ -21,6 +21,7 @@ case class Thing(
   score: Int,
   over18: Boolean,
   downs: Int,
+  saved: Boolean,
   isSelf: Boolean,
   permalink: String,
   name: String,
@@ -118,5 +119,5 @@ object Thing {
       None
 
   implicit def ThingCodecJson: CodecJson[Thing] =
-    casecodec16(Thing.apply, Thing.unapply)("domain", "subreddit", "id", "author", "score", "over_18", "downs", "is_self", "permalink", "name", "url", "title", "created_utc", "ups", "num_comments", "visited")
+    casecodec17(Thing.apply, Thing.unapply)("domain", "subreddit", "id", "author", "score", "over_18", "downs", "saved", "is_self", "permalink", "name", "url", "title", "created_utc", "ups", "num_comments", "visited")
 }

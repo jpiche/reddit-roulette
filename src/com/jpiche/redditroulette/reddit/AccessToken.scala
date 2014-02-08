@@ -42,6 +42,29 @@ object AccessToken {
     }
   }
 
+  def refresh(refresh: String, state: String)(implicit webSettings: HermesSettings): Future[Option[AccessToken]] = {
+    val params = Map(
+      "state" -> state,
+      "scope" -> RouletteApp.REDDIT_SCOPE,
+      "client_id" -> RouletteApp.REDDIT_CLIENTID,
+      "redirect_uri" -> RouletteApp.REDDIT_REDIRECT,
+      "grant_type" -> "refresh_token",
+      "response_type" -> "code"
+    )
+
+    val auth = (RouletteApp.REDDIT_CLIENTID, RouletteApp.REDDIT_SECRET)
+
+    Hermes.post(accessTokenUrl, params, auth) collect {
+      case web: HermesSuccess =>
+        Log.d("AccessToken", s"refresh token response: ${web.asString}")
+        web.asString.decodeOption[AccessToken]
+
+      case fail: HermesFail =>
+        Log.d("AccessToken", s"access token response (code ${fail.status}): $fail")
+        None
+    }
+  }
+
   implicit def AccessTokenCodecJson: CodecJson[AccessToken] =
     casecodec4(AccessToken.apply, AccessToken.unapply)("access_token", "token_type", "refresh_token", "scope")
 }

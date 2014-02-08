@@ -1,7 +1,7 @@
 package com.jpiche.redditroulette.activities
 
 import android.app.{Fragment, Activity}
-import com.jpiche.redditroulette.BaseAct
+import com.jpiche.redditroulette.{R, BaseAct}
 import android.os.Bundle
 import android.util.Log
 import com.jpiche.redditroulette.fragments.{SubredditAddDialogFragment, SubredditAddListener, SubredditListFragment}
@@ -28,7 +28,7 @@ final class SubredditListActivity extends Activity with BaseAct {
           p success true
 
         case _ =>
-          toast("Error retreiving subreddit info.")
+          toast(R.string.sub_error_retreive)
           p success false
       }
       p.future

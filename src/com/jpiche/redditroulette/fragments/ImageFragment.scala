@@ -5,7 +5,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, promise, future}
 import scala.util.{Failure, Success}
 
-import android.view.{LayoutInflater, ViewGroup, View}
+import android.view.{MenuItem, LayoutInflater, ViewGroup, View}
 import android.os.Bundle
 import android.graphics.{Movie, Bitmap}
 
@@ -76,7 +76,7 @@ final case class ImageFragment() extends ThingFragment {
 
         pData = Some(p.future)
     }
-    return
+    ()
   }
 
   override def onCreateView(inflater: LayoutInflater,
@@ -121,6 +121,19 @@ final case class ImageFragment() extends ThingFragment {
 
     v
   }
+
+  override def onOptionsItemSelected(item: MenuItem): Boolean =
+    item.getItemId match {
+      case R.id.setImageAs if thing.isDefined =>
+        endData match {
+          case Some(Left(bmp)) =>
+            listener map { _.setImageAs(thing.get, bmp) }
+          case _ =>
+        }
+        true
+
+      case _ => super.onOptionsItemSelected(item)
+    }
 }
 
 object ImageFragment {

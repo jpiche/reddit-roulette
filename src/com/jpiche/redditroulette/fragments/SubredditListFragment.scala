@@ -34,10 +34,10 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
             listAdapter = Some(a)
           }
         }
-        return
+        ()
       }
     })
-    return
+    ()
   }
 
   override def onCreate(inst: Bundle) {
@@ -98,7 +98,7 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
                 notifyChange()
                 dialog.dismiss()
             }
-            prefs.updatedSubreddits()
+            prefs.didUpdate()
           }
         })
         builder.setNegativeButton(R.string.dialog_cancel, new OnClickListener {
@@ -126,7 +126,7 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
         def onClick(dialog: DialogInterface, which: Int) {
           db.deleteSub(id) onComplete {
             case _ =>
-              prefs.updatedSubreddits()
+              prefs.didUpdate()
               handler.post(new Runnable {
                 def run() {
                   parent.getAdapter match {
@@ -147,7 +147,7 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
               })
               dialog.dismiss()
           }
-          return
+          ()
         }
       })
 
@@ -158,10 +158,8 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
       })
       builder.create().show()
     }
-    return
+    ()
   }
 }
 
-object SubredditListFragment extends FragTag {
-
-}
+object SubredditListFragment extends FragTag

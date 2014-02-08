@@ -4,15 +4,14 @@ import scalaz._, Scalaz._
 import scalaz.std.boolean.unless
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, promise}
+import scala.concurrent.{Future, promise, future}
 import scala.util.{Failure, Success}
 import scala.collection.mutable
 
 import android.os.Bundle
-import android.util.Log
-import android.app.{Activity, Fragment}
-import android.view.MenuItem
-import android.content.{Context, Intent}
+import android.app.{AlertDialog, WallpaperManager, Activity, Fragment}
+import android.view.{Menu, MenuItem}
+import android.content.{DialogInterface, Context, Intent}
 import android.net.ConnectivityManager
 
 import android.support.v4.view.PagerAdapter.POSITION_NONE
@@ -26,36 +25,31 @@ import com.jpiche.redditroulette._
 import com.google.analytics.tracking.android.EasyTracker
 import org.joda.time.DateTime
 import com.jpiche.redditroulette.views.ZoomOutPageTransformer
-import java.io.{FileOutputStream, File}
 import com.jpiche.hermes.{HermesRequest, HermesFail, Hermes, HermesSuccess}
-import com.squareup.okhttp.internal.Base64
 import android.widget.Toast
+import android.graphics.Bitmap
+import android.content.DialogInterface.OnClickListener
+
+
+sealed trait ThingData {
+  val webData: HermesSuccess
+  val thing: Thing
+}
+final case class ThingWebData(webData: HermesSuccess, thing: Thing) extends ThingData
+final case class ThingBitmapData(webData: HermesSuccess, thing: Thing) extends ThingData
 
 
 final class MainActivity extends Activity with BaseAct with TypedViewHolder {
 
-  private sealed trait ThingData {
-    val webData: HermesSuccess
-    val thing: Thing
-  }
-  private final case class ThingWebData(webData: HermesSuccess, thing: Thing) extends ThingData
-  private final case class ThingBitmapData(webData: HermesSuccess, thing: Thing) extends ThingData
-
-//  private lazy val cacheDir = {
-//    val ex = getExternalCacheDir
-//    val cache = new File(ex, "img")
-//    cache.mkdirs()
-//    cache
-//  }
-
-  private lazy val viewPagerAdapter = new FragmentStatePagerAdapter(getFragmentManager) with ThingPagerAdapter
   private lazy val viewPager = findView(TR.viewPager)
+  private lazy val viewPagerAdapter =
+    new FragmentStatePagerAdapter(getFragmentManager) with ThingPagerAdapter
 
   private var lastSub: Option[String] = None
   private var allowNsfwPref = false
 
   private val frags = mutable.ArrayBuffer.empty[Fragment]
-  private var lastClear: Long = DateTime.now.getMillis
+  private var lastClear: Long = 0
   private val futures = mutable.HashMap.empty[Int, Future[ThingData]]
 
 
@@ -82,8 +76,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         case load: LoadingFragment => true
         case _ => false
       }
-
-//      Log.d(LOG_TAG, s"onPageSelected ($p) with loading count ($count); frags(p): ${frags(p)}")
 
       if (p > 0
         && p == frags.size - 1
@@ -124,7 +116,9 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       }
     }
 
-    def saveThing(thing: Thing) {
+    def saveThing(thing: Thing): Future[Boolean] = {
+      val p = promise[Boolean]()
+
       if (prefs.isLoggedIn) {
         val url = "https://oauth.reddit.com/api/save"
         val params = Map(
@@ -137,16 +131,82 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         Hermes.http(req) onComplete {
           case Success(web@HermesSuccess(_, _)) =>
             debug(s"$url worked! (status ${web.status}): ${web.asString}")
-            toast("Post saved", Toast.LENGTH_SHORT)
+            toast(R.string.save_worked, Toast.LENGTH_SHORT)
+            p success true
+
           case Success(fail@HermesFail(conn)) =>
             warn(s"$url error (status ${fail.status}): ${conn.getContent}")
+            toast(R.string.save_failed)
+            p success false
+
           case Failure(e) =>
             warn(s"$url error: $e")
+            toast(R.string.save_failed)
+            p failure e
         }
       } else {
-        toast("Not logged in. Try logging in first.")
+        toast(R.string.auth_not_logged_in)
+        p success false
       }
-      return
+
+      p.future
+    }
+
+    def unsaveThing(thing: Thing): Future[Boolean] = {
+      val p = promise[Boolean]()
+
+      if (prefs.isLoggedIn) {
+        val url = "https://oauth.reddit.com/api/unsave"
+        val params = Map(
+          "id" -> thing.name,
+          "grant_type" -> "authorization_code"
+        )
+        val get = HermesRequest.post(url.toString, params)
+        val req = get.addHeader(("Authorization", s"Bearer ${prefs.accessToken}"))
+
+        Hermes.http(req) onComplete {
+          case Success(web@HermesSuccess(_, _)) =>
+            debug(s"$url worked! (status ${web.status}): ${web.asString}")
+            toast(R.string.unsave_worked, Toast.LENGTH_SHORT)
+            p success true
+
+          case Success(fail@HermesFail(conn)) =>
+            warn(s"$url error (status ${fail.status}): ${conn.getContent}")
+            toast(R.string.unsave_failed)
+            p success false
+
+          case Failure(e) =>
+            warn(s"$url error: $e")
+            toast(R.string.unsave_failed)
+            p failure e
+        }
+      } else {
+        toast(R.string.auth_not_logged_in)
+        p success false
+      }
+
+      p.future
+    }
+
+    def setImageAs(thing: Thing, data: Bitmap) {
+      val builder = new AlertDialog.Builder(thisContext)
+      builder.setMessage(R.string.dialog_wall_msg)
+      builder.setPositiveButton(R.string.dialog_wall_yes, new OnClickListener {
+        def onClick(dialog: DialogInterface, which: Int) {
+          future {
+            val wall = WallpaperManager getInstance thisContext
+            wall.setBitmap(data)
+            toast(R.string.dialog_wall_finished)
+          }
+          dialog.dismiss()
+        }
+      })
+      builder.setNegativeButton(R.string.dialog_no, new OnClickListener {
+        def onClick(dialog: DialogInterface, which: Int) {
+          dialog.dismiss()
+        }
+      })
+      builder.create().show()
     }
   }
 
@@ -192,7 +252,8 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
     }
 
-    allowNsfwPref = prefs.allowNsfw
+    prefs.didUpdate()
+    lastClear = prefs.lastUpdate + 1
 
     frags ++= Seq(HomeFragment(), LoadingFragment(1))
 
@@ -205,22 +266,18 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   override def onResume() {
     super.onResume()
 
-    val newNsfw = prefs.allowNsfw
-    if (newNsfw != allowNsfwPref) {
-      allowNsfwPref = newNsfw
-    }
+    allowNsfwPref = prefs.allowNsfw
 
-    if (prefs.allowNsfw != allowNsfwPref
-      || prefs.lastSubredditUpdate > lastClear
-    ) {
+    if (prefs.lastUpdate > lastClear) {
       lastClear = DateTime.now.getMillis
       clearFrags()
+      viewPager.setCurrentItem(0)
     }
 
     db.subCache = None
 
     shouldActionUp()
-    return
+    ()
   }
 
   override def onAttachFragment(frag: Fragment) {
@@ -229,7 +286,15 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       case w: WebFragment => w.listener = webListener.some
       case i: ImageFragment => i.listener = imageListener.some
       case n: NsfwDialogFragment => n.listener = nsfwListener.some
-      case _ => return
+      case _ =>
+    }
+  }
+
+  override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+    requestCode match {
+      case LoginActivity.LOGIN_REQUEST_CODE =>
+        invalidateOptionsMenu()
+      case _ =>
     }
   }
 
@@ -266,6 +331,22 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       super.onBackPressed()
   }
 
+  override def onPrepareOptionsMenu(menu: Menu): Boolean = {
+    val login = menu.findItem(R.id.login)
+    val logout = menu.findItem(R.id.logout)
+
+    if (login != null && logout != null) {
+      if (prefs.isLoggedIn) {
+        login.setVisible(false)
+        logout.setVisible(true)
+      } else {
+        login.setVisible(true)
+        logout.setVisible(false)
+      }
+    }
+    true
+  }
+
   override def onOptionsItemSelected(item: MenuItem): Boolean =
     item.getItemId match {
       case R.id.settings =>
@@ -273,15 +354,22 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         startActivity(i)
         true
 
-      // TODO: Finish login code so that this can work
       case R.id.login =>
         debug("login clicked")
         val i = new Intent(this, classOf[LoginActivity])
-        startActivity(i)
+        startActivityForResult(i, LoginActivity.LOGIN_REQUEST_CODE)
         true
 
       case R.id.logout =>
         debug("logout clicked")
+        prefs.logout()
+        toast(R.string.auth_logout)
+        invalidateOptionsMenu()
+        true
+
+      case R.id.about =>
+        debug("about clicked")
+        AboutDialogFragment().show(getFragmentManager, AboutDialogFragment.FRAG_TAG)
         true
 
       case _ => super.onOptionsItemSelected(item)
@@ -332,15 +420,6 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
               loading.map { _.setProgress(p) }
             }) onComplete {
               case Success(webBmp@HermesSuccess(_, data)) if ! web.contentType.isGif =>
-
-//                val imgFile = new File(cacheDir, thing.url64)
-//                if (imgFile.canWrite) {
-//                  Log.d(LOG_TAG, s"can write to file path: ${imgFile.getAbsolutePath}")
-//                  val writer = new FileOutputStream(imgFile)
-//                  writer.write(data, 0, data.length)
-//                  writer.flush()
-//                  writer.close()
-//                }
 
                 p success ThingBitmapData(webBmp, thing)
 
