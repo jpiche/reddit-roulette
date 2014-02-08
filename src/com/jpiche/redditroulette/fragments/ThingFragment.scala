@@ -83,9 +83,12 @@ abstract class ThingFragment extends Fragment
           thing map { t =>
             saveProcess = true
             manager.invalidateOptionsMenu()
-            l.saveThing(t) onSuccess {
-              case true =>
+            l.saveThing(t) andThen {
+              case _ =>
                 saveProcess = false
+                manager.invalidateOptionsMenu()
+            } onSuccess {
+              case true =>
                 saved = true
                 manager.invalidateOptionsMenu()
               case false =>
@@ -99,9 +102,12 @@ abstract class ThingFragment extends Fragment
           thing map { t =>
             saveProcess = true
             manager.invalidateOptionsMenu()
-            l.unsaveThing(t) onSuccess {
-              case true =>
+            l.unsaveThing(t) andThen {
+              case _ =>
                 saveProcess = false
+                manager.invalidateOptionsMenu()
+            } onSuccess {
+              case true =>
                 saved = false
                 manager.invalidateOptionsMenu()
               case false =>
