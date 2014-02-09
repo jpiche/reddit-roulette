@@ -49,7 +49,8 @@ object AccessToken {
       "client_id" -> RouletteApp.REDDIT_CLIENTID,
       "redirect_uri" -> RouletteApp.REDDIT_REDIRECT,
       "grant_type" -> "refresh_token",
-      "response_type" -> "code"
+      "response_type" -> "code",
+      "refresh_token" -> refresh
     )
 
     val auth = (RouletteApp.REDDIT_CLIENTID, RouletteApp.REDDIT_SECRET)

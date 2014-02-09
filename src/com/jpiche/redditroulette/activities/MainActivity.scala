@@ -156,7 +156,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
             p success true
 
           case Success(fail@HermesFail(conn)) =>
-            warn(s"$url error (status ${fail.status}): ${conn.getContent}")
+            warn(s"$url error, status: ${fail.status}")
             if (fail.status == 401 && prefs.refreshToken != "") {
               AccessToken.refresh(prefs.refreshToken, "gfre456789ijhgf") onComplete {
                 case Success(Some(AccessToken(access, _, refresh, _))) =>
@@ -164,11 +164,19 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
                   prefs accessToken access
                   prefs refreshToken refresh
                   p completeWith doThing(thing, action, count + 1)
-                case _ =>
+
+                case Success(None) =>
+                  debug(s"refresh failed with none!")
+                  toast(failMsg)
+                  p success false
+
+                case Failure(e) =>
+                  debug(s"refresh failed: $e")
                   toast(failMsg)
                   p success false
               }
             } else {
+              warn(s"$url error, status (${fail.status}) or refresh token empty (${prefs.refreshToken})")
               toast(failMsg)
               p success false
             }
