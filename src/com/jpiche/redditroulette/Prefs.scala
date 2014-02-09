@@ -9,9 +9,10 @@ final class Prefs(val shared: SharedPreferences) {
   def allowNsfw = shared.getBoolean(PREF_NSFW, false)
   def showSelf = shared.getBoolean(PREF_SELF, false)
   def lastUpdate = shared.getLong(PREF_LAST_UPDATE, DateTime.now.getMillis)
-  def didUpdate() {
-    shared.edit().putLong(PREF_LAST_UPDATE, DateTime.now.getMillis).commit()
-    ()
+  def didUpdate(): Long = {
+    val now = DateTime.now.getMillis
+    shared.edit().putLong(PREF_LAST_UPDATE, now).commit()
+    now
   }
 
   def accessToken = shared.getString(REDDIT_ACCESS_TOKEN, "")

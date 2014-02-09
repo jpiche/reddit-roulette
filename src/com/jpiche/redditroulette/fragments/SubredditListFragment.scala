@@ -99,6 +99,7 @@ final case class SubredditListFragment() extends Fragment with BaseFrag with OnI
                 dialog.dismiss()
             }
             prefs.didUpdate()
+            ()
           }
         })
         builder.setNegativeButton(R.string.dialog_cancel, new OnClickListener {

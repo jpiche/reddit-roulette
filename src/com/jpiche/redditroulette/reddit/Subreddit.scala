@@ -1,8 +1,9 @@
 package com.jpiche.redditroulette.reddit
 
+import scalaz._, Scalaz._
 import argonaut._, Argonaut._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, promise, future}
+import scala.concurrent.{Future, promise}
 import scala.util.Random
 import com.jpiche.redditroulette._
 import scala.collection.mutable
@@ -30,19 +31,17 @@ case class Subreddit(
   lazy val url = "http://www.reddit.com/r/%s/" format name
   lazy val hot = url + "hot.json?limit=100"
 
-  def next(implicit webSettings: HermesSettings, prefs: Prefs): Future[(HermesSuccess, Thing)] =
+  def next(implicit webSettings: HermesSettings, prefs: Prefs): \/[(HermesSuccess, Thing), Future[(HermesSuccess, Thing)]] =
     Subreddit.listCache.get(name) match {
       // TODO: make the number a variable somewhere?
       case Some((web, listing)) if Subreddit.listCacheInc.getOrElse(name, 0) < 20 =>
-        future {
-          // increment the number of times we've used this
-          // TODO: is this thread safe?
-          Subreddit.listCacheInc put (name, Subreddit.listCacheInc.getOrElse(name, 1))
-          Subreddit.listCache put (name, (web, listing))
-          (web, Subreddit.randomThing(listing))
-        }
+        // increment the number of times we've used this
+        Subreddit.listCacheInc put (name, Subreddit.listCacheInc.getOrElse(name, 1))
+        Subreddit.listCache put (name, (web, listing))
+        (web, Subreddit.randomThing(listing)).left
+
       case _ =>
-        Hermes.get(hot) collect {
+        val f = Hermes.get(hot) collect {
           case web: HermesSuccess =>
             web.asString.decodeOption[Listing] match {
               case Some(list) if list.hasChildren =>
@@ -55,6 +54,7 @@ case class Subreddit(
 
           case fail: HermesFail => throw new Exception(fail.conn.getResponseMessage)
         }
+        f.right
     }
 }
 

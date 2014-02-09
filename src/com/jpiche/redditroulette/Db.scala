@@ -1,7 +1,7 @@
 package com.jpiche.redditroulette
 
+import scalaz._, Scalaz._
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import android.database.sqlite.{SQLiteDatabase, SQLiteOpenHelper}
 import android.content.{ContentValues, Context}
 import com.jpiche.redditroulette.reddit.{Thing, Subreddit}
@@ -150,18 +150,19 @@ sealed trait Db extends SQLiteOpenHelper {
 
   var subCache: Option[(Boolean, Seq[Subreddit])] = None
 
-  def nextSub(nsfw: Boolean, lastOpt: Option[String]): Subreddit = {
+  def nextSub(nsfw: Boolean, lastOpt: Option[String]): \/[Subreddit, Future[Subreddit]] =
     subCache match {
       case Some((cacheNsfw, cacheSeq)) if cacheNsfw == nsfw =>
         val i = Random.nextInt(cacheSeq.size)
-        cacheSeq(i)
+        cacheSeq(i).left
       case _ =>
-        val all = allSubs(nsfw)
-        val i = Random.nextInt(all.size)
-        subCache = Some((nsfw, all))
-        all(i)
+        future {
+          val all = allSubs(nsfw)
+          val i = Random.nextInt(all.size)
+          subCache = Some((nsfw, all))
+          all(i)
+        }.right
     }
-  }
 
   def countSubs: Int = read { db =>
     val cursor = db.rawQuery(Db.subreddit.COUNT, null)

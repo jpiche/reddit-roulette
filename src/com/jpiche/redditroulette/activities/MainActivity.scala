@@ -18,7 +18,7 @@ import android.support.v4.view.PagerAdapter.POSITION_NONE
 import android.support.v4.view.ViewPager.SimpleOnPageChangeListener
 import android.support.v13.app.FragmentStatePagerAdapter
 
-import com.jpiche.redditroulette.reddit.Thing
+import com.jpiche.redditroulette.reddit.{Subreddit, Thing, AccessToken}
 import com.jpiche.redditroulette.fragments._
 import com.jpiche.redditroulette._
 
@@ -96,7 +96,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         case frag: ThingFragment if frag.thing.isDefined =>
           getActionBar setTitle frag.thing.get.title
         case load: LoadingFragment =>
-          getActionBar setTitle R.string.loading
+          getActionBar setTitle load.loadingText
         case home: HomeFragment =>
           getActionBar setTitle R.string.app_name
       }
@@ -116,47 +116,32 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       }
     }
 
-    def saveThing(thing: Thing): Future[Boolean] = {
+    def saveThing(thing: Thing): Future[Boolean] = doThing(thing, "save", 0)
+    def unsaveThing(thing: Thing): Future[Boolean] = doThing(thing, "unsave", 0)
+
+    private def doThing(thing: Thing, action: String, count: Int): Future[Boolean] = {
       val p = promise[Boolean]()
 
-      if (prefs.isLoggedIn) {
-        val url = "https://oauth.reddit.com/api/save"
-        val params = Map(
-          "id" -> thing.name,
-          "grant_type" -> "authorization_code"
-        )
-        val get = HermesRequest.post(url.toString, params)
-        val req = get.addHeader(("Authorization", s"Bearer ${prefs.accessToken}"))
-
-        Hermes.http(req) onComplete {
-          case Success(web@HermesSuccess(_, _)) =>
-            debug(s"$url worked! (status ${web.status}): ${web.asString}")
-            toast(R.string.save_worked, Toast.LENGTH_SHORT)
-            p success true
-
-          case Success(fail@HermesFail(conn)) =>
-            warn(s"$url error (status ${fail.status}): ${conn.getContent}")
-            toast(R.string.save_failed)
-            p success false
-
-          case Failure(e) =>
-            warn(s"$url error: $e")
-            toast(R.string.save_failed)
-            p failure e
-        }
-      } else {
-        toast(R.string.auth_not_logged_in)
+      if (count > 1) {
         p success false
+        return p.future
       }
 
-      p.future
-    }
+      action match {
+        case "save" =>
+        case "unsave" =>
+        case _ =>
+          p success false
+          return p.future
+      }
 
-    def unsaveThing(thing: Thing): Future[Boolean] = {
-      val p = promise[Boolean]()
+      val (workMsg, failMsg) = if (action == "save")
+        (R.string.save_worked, R.string.save_failed)
+      else
+        (R.string.unsave_worked, R.string.unsave_failed)
 
       if (prefs.isLoggedIn) {
-        val url = "https://oauth.reddit.com/api/unsave"
+        val url = s"https://oauth.reddit.com/api/$action"
         val params = Map(
           "id" -> thing.name,
           "grant_type" -> "authorization_code"
@@ -167,17 +152,30 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
         Hermes.http(req) onComplete {
           case Success(web@HermesSuccess(_, _)) =>
             debug(s"$url worked! (status ${web.status}): ${web.asString}")
-            toast(R.string.unsave_worked, Toast.LENGTH_SHORT)
+            toast(workMsg, Toast.LENGTH_SHORT)
             p success true
 
           case Success(fail@HermesFail(conn)) =>
             warn(s"$url error (status ${fail.status}): ${conn.getContent}")
-            toast(R.string.unsave_failed)
-            p success false
+            if (fail.status == 401 && prefs.refreshToken != "") {
+              AccessToken.refresh(prefs.refreshToken, "gfre456789ijhgf") onComplete {
+                case Success(Some(AccessToken(access, _, refresh, _))) =>
+                  debug(s"refresh worked!")
+                  prefs accessToken access
+                  prefs refreshToken refresh
+                  p completeWith doThing(thing, action, count + 1)
+                case _ =>
+                  toast(failMsg)
+                  p success false
+              }
+            } else {
+              toast(failMsg)
+              p success false
+            }
 
           case Failure(e) =>
             warn(s"$url error: $e")
-            toast(R.string.unsave_failed)
+            toast(failMsg)
             p failure e
         }
       } else {
@@ -252,8 +250,7 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
       NsfwDialogFragment().show(manager, NsfwDialogFragment.FRAG_TAG)
     }
 
-    prefs.didUpdate()
-    lastClear = prefs.lastUpdate + 1
+    lastClear = prefs.didUpdate()
 
     frags ++= Seq(HomeFragment(), LoadingFragment(1))
 
@@ -379,6 +376,66 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
     getActionBar.setDisplayHomeAsUpEnabled(viewPager.getCurrentItem > 0)
   }
 
+  private def processThingForNext(web: HermesSuccess, thing: Thing, position: Int): Future[ThingData] = {
+    val p = promise[ThingData]()
+
+    // if the post is marked nsfw even though the subreddit is not,
+    // and the user has nsfw off, skip it
+    if (thing.over18 && ! prefs.allowNsfw) {
+      p completeWith nextThing(position)
+
+      // look at the db for distance between this and that last time it was shown
+    } else if (needsSkip(thing)) {
+      p completeWith nextThing(position)
+
+      // else, it should be safe
+    } else {
+      val fallback = ThingWebData(web, thing)
+      if (thing.isImg && ! thing.likelyGif) {
+        Hermes.get(thing.goodUrl) onComplete {
+          case Success(webBmp@HermesSuccess(_, data)) if ! web.contentType.isGif =>
+            debug(s"loaded image url: ${thing.goodUrl}")
+            p success ThingBitmapData(webBmp, thing)
+
+          case Success(_) =>
+            debug(s"loaded web url: ${thing.goodUrl}")
+            p success fallback
+
+          case Failure(e) =>
+            warn(s"api exception loading url (${thing.goodUrl}: $e")
+            p success fallback
+        }
+      } else {
+        p success fallback
+      }
+    }
+
+    p.future
+  }
+
+  private def processSubForNext(sub: Subreddit, position: Int): Future[ThingData] = {
+    val p = promise[ThingData]()
+
+    sub.next match {
+      case -\/((web, thing)) =>
+        debug(s"found next thing from cache: $thing")
+        p completeWith processThingForNext(web, thing, position)
+
+      case \/-(f) => f onComplete {
+        case Success((web: HermesSuccess, thing: Thing)) =>
+          debug(s"found next thing from future: $thing")
+          p completeWith processThingForNext(web, thing, position)
+
+        case Failure(e) =>
+          warn(s"api exception: $e")
+          p failure e
+      }
+    }
+    lastSub = sub.name.some
+
+    p.future
+  }
+
   /**
    * This is an aggregate function for subreddit and "thing" finding which
    * returns a composite `Future[ThingData]` at the end of the chain, which
@@ -387,59 +444,28 @@ final class MainActivity extends Activity with BaseAct with TypedViewHolder {
   private def nextThing(position: Int): Future[ThingData] = {
     val p = promise[ThingData]()
 
-    val sub = db.nextSub(allowNsfwPref, lastSub)
     frags(position) match {
       case loading: LoadingFragment =>
         loading.setLoadingText(R.string.finding_next_post)
       case _ =>
     }
-    sub.next onComplete {
-      case Success((web: HermesSuccess, thing: Thing)) =>
 
-        // if the post is marked nsfw even though the subreddit is not,
-        // and the user has nsfw off, skip it
-        if (thing.over18 && ! prefs.allowNsfw) {
-          p completeWith nextThing(position)
+    db.nextSub(allowNsfwPref, lastSub) match {
+      case -\/(sub) =>
+        debug(s"found subreddit from cache: $sub")
+        p completeWith processSubForNext(sub, position)
 
-        // look at the db for distance between this and that last time it was shown
-        } else if (needsSkip(thing)) {
-          p completeWith nextThing(position)
+      case \/-(futureSub) => futureSub onComplete {
+        case Success(sub: Subreddit) =>
+          debug(s"found subreddit in future: $sub")
+          p completeWith processSubForNext(sub, position)
 
-        // else, it should be safe
-        } else {
-          val fallback = ThingWebData(web, thing)
-          if (thing.isImg && ! thing.likelyGif) {
-            val loading = frags(position) match {
-              case loading: LoadingFragment =>
-                loading.setLoadingText(R.string.downloading_image)
-                loading.some
-              case _ => none
-            }
-            Hermes.get(thing.goodUrl, x => {
-              val p = Math.round(x * 100)
-              loading.map { _.setProgress(p) }
-            }) onComplete {
-              case Success(webBmp@HermesSuccess(_, data)) if ! web.contentType.isGif =>
-
-                p success ThingBitmapData(webBmp, thing)
-
-              case Success(_) =>
-                p success fallback
-
-              case Failure(e) =>
-                warn(s"api exception loading url (${thing.goodUrl}: $e")
-                p success fallback
-            }
-          } else {
-            p success fallback
-          }
-          lastSub = sub.name.some
-        }
-
-      case Failure(e) =>
-        warn(s"api exception: $e")
-        p failure e
+        case Failure(e) =>
+          warn(s"unable to find next subreddit: $e")
+          p failure e
+      }
     }
+
     p.future
   }
 

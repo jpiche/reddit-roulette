@@ -10,6 +10,8 @@ import com.jpiche.redditroulette.TypedResource._
 
 final case class LoadingFragment() extends Fragment with BaseFrag with PagerFrag {
 
+  var loadingText = R.string.loading
+
   override def onCreate(inst: Bundle) {
     super.onCreate(inst)
 
@@ -22,6 +24,10 @@ final case class LoadingFragment() extends Fragment with BaseFrag with PagerFrag
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup,
                             savedInstanceState: Bundle): View = {
+    if (savedInstanceState != null) {
+      loadingText = savedInstanceState.getInt(LoadingFragment.KEY_LOAD_TEXT, loadingText)
+    }
+
     val attachToRoot = false
     val v = inflater.inflate(TR.layout.fragment_loading, container, attachToRoot)
 
@@ -31,15 +37,23 @@ final case class LoadingFragment() extends Fragment with BaseFrag with PagerFrag
     val prog = v findView TR.progress
     prog.setMax(100)
 
+    val load = v findView TR.loadingText
+    load setText loadingText
+
     v
+  }
+
+  override def onSaveInstanceState(outState: Bundle) {
+    outState.putInt(LoadingFragment.KEY_LOAD_TEXT, loadingText)
+    super.onSaveInstanceState(outState)
   }
 
   def setLoadingText(resId: Int) {
     run {
       val view = getView
       if (view != null) {
-        val loadingText = view findView TR.loadingText
-        loadingText.setText(resId)
+        val load = view findView TR.loadingText
+        load setText resId
       }
     }
   }
@@ -56,7 +70,7 @@ final case class LoadingFragment() extends Fragment with BaseFrag with PagerFrag
 }
 
 object LoadingFragment {
-  final val KEY_POSITION = "__POSITION"
+  final val KEY_LOAD_TEXT = "KEY_LOAD_TEXT"
 
   def apply(position: Int): LoadingFragment = {
     val frag = new LoadingFragment()
